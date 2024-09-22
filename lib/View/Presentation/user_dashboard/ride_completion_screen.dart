@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class RideCompletionPage extends StatefulWidget {
   final String pickupAddress;
@@ -65,10 +67,11 @@ class _RideCompletionPageState extends State<RideCompletionPage> {
 
             // Confirm Button
             ElevatedButton(
-              onPressed: () {
-                // Handle submitting rating and feedback
-              },
-              child: Text("Submit Rating & Feedback"),
+              onPressed: _submitRatings,
+              child: Text("Submit Rating & Feedback",style: GoogleFonts.openSans(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w500,
+              ),),
             )
           ],
         ),
@@ -95,4 +98,30 @@ class _RideCompletionPageState extends State<RideCompletionPage> {
       }),
     );
   }
+
+  void _submitRatings() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            "Thank you for your feedback!",
+            style: GoogleFonts.openSans(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 }

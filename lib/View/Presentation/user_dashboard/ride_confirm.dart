@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-
-import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'dart:async'; // Add this import for Timer
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:kantipur_ride/View/Presentation/user_dashboard/ride_completion_screen.dart';
+
+import '../../../utils/dt_colors.dart';
 
 class RideConfirmationScreen extends StatefulWidget {
   @override
@@ -17,15 +22,58 @@ class _RideConfirmationScreenState extends State<RideConfirmationScreen> {
 
   GoogleMapController? _controller;
 
+  @override
+  void initState() {
+    super.initState();
+
+    // Start a timer that shows the alert after 10 seconds
+    Timer(Duration(seconds: 10), () {
+      _showThankYouDialog();
+    });
+  }
+
   void _onMapCreated(GoogleMapController controller) {
     _controller = controller;
+  }
+
+  // Function to show the Thank You alert dialog
+  void _showThankYouDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+
+          content: Text("Thank you for the ride!",style: GoogleFonts.openSans(
+            color: AppColors.primaryColor,
+            fontSize: 22.sp,
+            fontWeight: FontWeight.w600,
+          ),),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Get.to(()=> RideCompletionPage(pickupAddress: '', dropOffAddress: 'dropOffAddress', fare: 1000, tripDuration: 'tripDuration', tripDistance: ''));
+              },
+              child: Text("OK",style: GoogleFonts.openSans(
+        color: AppColors.primaryColor,
+        fontSize: 18.sp,
+        fontWeight: FontWeight.w600,
+        ),),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Ride Confirmation"),
+        title: Text("Ride Confirmation",style: GoogleFonts.openSans(
+        color: AppColors.primaryColor,
+        fontSize: 18.sp,
+        fontWeight: FontWeight.w600,
+        ),),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -47,12 +95,20 @@ class _RideConfirmationScreenState extends State<RideConfirmationScreen> {
                     Text(
                       "John Doe",
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 18.sp,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text("Rating: 4.8 ★"),
-                    Text("Vehicle: Tesla Model X"),
+                    Text("Rating: 4.8 ★",style: GoogleFonts.openSans(
+                    color: AppColors.primaryColor,
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w600,
+                    ),),
+                    Text("Vehicle: Tesla Model X",style: GoogleFonts.openSans(
+                    color: AppColors.primaryColor,
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w600,
+                    ),),
                   ],
                 ),
               ],
@@ -67,8 +123,16 @@ class _RideConfirmationScreenState extends State<RideConfirmationScreen> {
                 // Estimated Time of Arrival (ETA)
                 ListTile(
                   leading: Icon(Icons.timer),
-                  title: Text("Estimated Arrival"),
-                  subtitle: Text("5 mins"),
+                  title: Text("Estimated Arrival",style: GoogleFonts.openSans(
+    color: AppColors.primaryColor,
+    fontSize: 18.sp,
+    fontWeight: FontWeight.w600,
+    ),),
+                  subtitle: Text("5 mins",style: GoogleFonts.openSans(
+                    color: AppColors.primaryColor,
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w600,
+                  ),),
                 ),
 
                 // Ride Route Map (Actual Map with Google Maps)

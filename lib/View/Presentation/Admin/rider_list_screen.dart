@@ -1,13 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:kantipur_ride/View/Presentation/Admin/passenger_detail_screen.dart';
+import 'package:kantipur_ride/View/Presentation/Admin/rider_detail_screen.dart';
+import '../../../Modal/rider.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../../../Modal/passenger.dart';
-
-
-class PassengerListScreen extends StatelessWidget {
-  final List<Passenger> passengers = [
-    Passenger(
+class RiderListScreen extends StatelessWidget {
+  final List<Rider> riders = [
+    Rider(
       id: '1',
       name: 'John Doe',
       email: 'john.doe@example.com',
@@ -15,7 +14,7 @@ class PassengerListScreen extends StatelessWidget {
       rideHistory: ['Ride 1', 'Ride 2', 'Ride 3'],
       currentRideStatus: 'Completed',
     ),
-    Passenger(
+    Rider(
       id: '2',
       name: 'Jane Smith',
       email: 'jane.smith@example.com',
@@ -29,30 +28,30 @@ class PassengerListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Passenger Records'),
+        title: Text('Rider Records'),
       ),
-      body: passengers.isEmpty
-          ? Center(child: Text('No passengers available.'))
+      body: riders.isEmpty
+          ? Center(child: Text('No riders available.'))
           : ListView.builder(
-        itemCount: passengers.length,
+        itemCount: riders.length,
         itemBuilder: (context, index) {
-          final passenger = passengers[index];
+          final rider = riders[index];
           return Card(
             elevation: 4,
             margin: EdgeInsets.all(20),
             child: ListTile(
               leading: Icon(Icons.person),
-              title: Text(passenger.name),
+              title: Text(rider.name),
               subtitle: Padding(
                 padding: const EdgeInsets.only(top: 4.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Email: ${passenger.email}'),
-                    SizedBox(height: 4),
-                    Text('Phone: ${passenger.phone}'),
-                    SizedBox(height: 4),
-                    Text('Current Ride: ${passenger.currentRideStatus}'),
+                    Text('Email: ${rider.email}'),
+                    SizedBox(height: 4.h),
+                    Text('Phone: ${rider.phone}'),
+                    SizedBox(height: 4.h),
+                    Text('Current Ride: ${rider.currentRideStatus}'),
                   ],
                 ),
               ),
@@ -61,7 +60,7 @@ class PassengerListScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => PassengerDetailScreen(passenger: passenger),
+                    builder: (context) => RiderDetailScreen(rider: rider),
                   ),
                 );
               },

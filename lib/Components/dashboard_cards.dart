@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:kantipur_ride/View/Presentation/Admin/passengers_list_screen.dart';
+import 'package:kantipur_ride/View/Presentation/Admin/regular_passenger_list_screen.dart';
 import 'package:kantipur_ride/utils/dt_colors.dart';
+import 'package:get/get.dart';
+
+import '../View/Presentation/Admin/rider_list_screen.dart';
 
 class DashboardCard extends StatelessWidget {
   final IconData icon;
@@ -74,23 +79,38 @@ class DashboardCards extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 16.w,vertical: 10.h),
         child: Column(
           children: [
-            DashboardCard(
-              icon: Icons.person,
-              iconBackgroundColor: Colors.orange,
-              title: 'No. of Passengers',
-              count: '30',
+            InkWell(
+              onTap: (){
+                Get.to(()=>PassengerListScreen(),transition: Transition.upToDown);
+              },
+              child: DashboardCard(
+                icon: Icons.person,
+                iconBackgroundColor: Colors.orange,
+                title: 'No. of Passengers',
+                count: '30',
+              ),
             ),
-            DashboardCard(
-              icon: Icons.motorcycle,
-              iconBackgroundColor: Colors.purple,
-              title: 'No. of Riders',
-              count: '32',
+            InkWell(
+              onTap: (){
+                Get.to(()=>RiderListScreen(),transition: Transition.upToDown);
+              },
+              child: DashboardCard(
+                icon: Icons.motorcycle,
+                iconBackgroundColor: Colors.purple,
+                title: 'No. of Riders',
+                count: '32',
+              ),
             ),
-            DashboardCard(
-              icon: Icons.alt_route,
-              iconBackgroundColor: Colors.pink,
-              title: 'No. of regular passenger',
-              count: '0',
+            InkWell(
+              onTap: (){
+                Get.to(()=>RegularPassengerListScreen(),transition: Transition.upToDown);
+              },
+              child: DashboardCard(
+                icon: Icons.alt_route,
+                iconBackgroundColor: Colors.pink,
+                title: 'No. of regular passenger',
+                count: '0',
+              ),
             ),
 
           ],

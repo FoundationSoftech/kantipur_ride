@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:kantipur_ride/Components/country_dropdown.dart';
 import 'package:kantipur_ride/Components/dashboard_cards.dart';
 import 'package:kantipur_ride/View/Presentation/Admin/drawer.dart';
+import 'package:kantipur_ride/View/Presentation/Admin/passengers_list_screen.dart';
 import 'package:kantipur_ride/View/Presentation/Admin/regular_passenger_vehicle.dart';
 import '../../../Components/orders_bar_chart.dart';
 import '../../../Components/overall_summary_chart.dart';
@@ -25,9 +26,9 @@ class AdminDashboardOverview extends StatelessWidget {
           SliverAppBar(
             backgroundColor: AppColors.primaryColor,
             automaticallyImplyLeading: false,
-            pinned: true, // Keeps the AppBar pinned at the top
-            floating: true, // Makes the AppBar visible immediately on scroll up
-            expandedHeight: 60.h, // Adjusted height for better visibility
+            pinned: true,
+            floating: true,
+            expandedHeight: 60.h,
             flexibleSpace: FlexibleSpaceBar(
               title: Row(
                 children: [
@@ -36,7 +37,7 @@ class AdminDashboardOverview extends StatelessWidget {
                     width: 170.w,
                     height: 120.h,
                   ),
-                  SizedBox(width: 10.w), // Space between the logo and the divider
+                  SizedBox(width: 10.w),
                   Container(
                     margin: EdgeInsets.symmetric(vertical: 10.h),
                     width: 3.w,
@@ -54,13 +55,13 @@ class AdminDashboardOverview extends StatelessWidget {
                       Scaffold.of(context).openDrawer(); // Open drawer
                     },
                   ),
-                  Spacer(), // Takes remaining space
+                  Spacer(),
                   Image.asset(
                     'assets/profile.png',
                     height: 42.h,
                     width: 42.w,
                   ),
-                  SizedBox(width: 10.w), // Space between profile and dropdown
+                  SizedBox(width: 10.w),
                   Image.asset(
                     'assets/drop.png',
                     color: Colors.white,
@@ -104,31 +105,28 @@ class AdminDashboardOverview extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 16.h),
-                  CountryDropdown(), // Custom dropdown for country selection
-                  SizedBox(height: 16.h),
-                  Text(
-                    'Regular Passenger Vehicle Requests',
-                    style: GoogleFonts.openSans(
-                      fontSize: 22.sp,
-                      color: AppColors.blueColor,
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  RegularPassengerRequestsList(), // Custom widget for regular passenger requests
-                  SizedBox(height: 16.h),
-                  DashboardCards(), // Custom widget for dashboard cards
-                  SizedBox(height: 16.h),
-                  TransportGraph(), // Custom graph widget
-                  SizedBox(height: 16.h),
-                  TotalServicesChart(), // Custom chart widget
-                  SizedBox(height: 16.h),
-                  OrdersBarChart(), // Custom bar chart widget
-                  SizedBox(height: 16.h),
-                  SummaryChart(), // Custom summary chart widget
-                  SizedBox(height: 16.h),
 
-                  SizedBox(height: 16.h),
+                  CountryDropdown(),
+                  SizedBox(height: 20.h),
+                  Text("Regular Passenger Vehicle request:",style: GoogleFonts.openSans(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryColor,
 
+                  ),),
+                  SizedBox(height: 10.h),
+                  RegularPassengerRequestsList(),
+                  SizedBox(height: 16.h),
+                  DashboardCards(),
+                  SizedBox(height: 16.h),
+                  TransportGraph(),
+                  SizedBox(height: 16.h),
+                  TotalServicesChart(),
+                  SizedBox(height: 16.h),
+                  OrdersBarChart(),
+                  SizedBox(height: 16.h),
+                  SummaryChart(),
+                  SizedBox(height: 16.h),
                 ],
               ),
             ),
@@ -138,6 +136,3 @@ class AdminDashboardOverview extends StatelessWidget {
     );
   }
 }
-
-
-
