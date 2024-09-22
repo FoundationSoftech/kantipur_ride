@@ -5,6 +5,7 @@ class Passenger {
   final String phone;
   final List<String> rideHistory;
   final String currentRideStatus;
+  final String? profilePictureUrl;
 
   Passenger({
     required this.id,
@@ -13,5 +14,6 @@ class Passenger {
     required this.phone,
     required this.rideHistory,
     required this.currentRideStatus,
+    required this.profilePictureUrl,
   });
 }

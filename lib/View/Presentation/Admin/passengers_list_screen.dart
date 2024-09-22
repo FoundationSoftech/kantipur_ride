@@ -14,6 +14,7 @@ class PassengerListScreen extends StatelessWidget {
       phone: '+1234567890',
       rideHistory: ['Ride 1', 'Ride 2', 'Ride 3'],
       currentRideStatus: 'Completed',
+      profilePictureUrl: ''
     ),
     Passenger(
       id: '2',
@@ -22,6 +23,7 @@ class PassengerListScreen extends StatelessWidget {
       phone: '+0987654321',
       rideHistory: ['Ride A', 'Ride B'],
       currentRideStatus: 'Active',
+      profilePictureUrl: ''
     ),
   ];
 

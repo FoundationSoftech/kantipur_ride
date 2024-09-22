@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
+import 'package:google_fonts/google_fonts.dart';
 
 
 class RequestItem extends StatelessWidget {
@@ -31,7 +31,10 @@ class RequestItem extends StatelessWidget {
           // Handle vehicle assignment
           showVehicleAssignmentDialog(context);
         },
-        child: Text('Assign Vehicle'),
+        child: Text('Assign Vehicle',style: GoogleFonts.openSans(
+          fontSize: 22.sp,
+          fontWeight: FontWeight.w600,
+        ),),
       ),
     );
   }
@@ -41,14 +44,20 @@ class RequestItem extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Assign Vehicle'),
+          title: Text('Assign Vehicle',style: GoogleFonts.openSans(
+            fontSize: 22.sp,
+            fontWeight: FontWeight.w600,
+          ),),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('Passenger: $passengerName'),
               // Dropdown or list for available vehicles
               DropdownButton<String>(
-                hint: Text('Select Vehicle'),
+                hint: Text('Select Vehicle',style: GoogleFonts.openSans(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w500,
+                ),),
                 items: <String>['Vehicle 1', 'Vehicle 2'].map((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
@@ -66,14 +75,20 @@ class RequestItem extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).pop(); // Close dialog
               },
-              child: Text('Cancel'),
+              child: Text('Cancel',style: GoogleFonts.openSans(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
+              ),),
             ),
             TextButton(
               onPressed: () {
                 // Handle confirm action
                 Navigator.of(context).pop(); // Close dialog
               },
-              child: Text('Assign'),
+              child: Text('Assign',style: GoogleFonts.openSans(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
+              ),),
             ),
           ],
         );

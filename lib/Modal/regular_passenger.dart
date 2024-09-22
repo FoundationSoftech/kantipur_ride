@@ -5,6 +5,7 @@ class RegularPassenger {
   final String phone;
   final List<String> rideHistory;
   final String currentRideStatus;
+  final String profilePictureUrl;
 
   RegularPassenger({
     required this.id,
@@ -13,5 +14,6 @@ class RegularPassenger {
     required this.phone,
     required this.rideHistory,
     required this.currentRideStatus,
+    required this.profilePictureUrl,
   });
 }

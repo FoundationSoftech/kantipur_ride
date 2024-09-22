@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kantipur_ride/View/Presentation/Admin/rider_detail_screen.dart';
 import '../../../Modal/rider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class RiderListScreen extends StatelessWidget {
   final List<Rider> riders = [
@@ -13,6 +14,7 @@ class RiderListScreen extends StatelessWidget {
       phone: '+1234567890',
       rideHistory: ['Ride 1', 'Ride 2', 'Ride 3'],
       currentRideStatus: 'Completed',
+      profilePictureUrl: '',
     ),
     Rider(
       id: '2',
@@ -21,6 +23,7 @@ class RiderListScreen extends StatelessWidget {
       phone: '+0987654321',
       rideHistory: ['Ride A', 'Ride B'],
       currentRideStatus: 'Active',
+      profilePictureUrl: '',
     ),
   ];
 
@@ -28,10 +31,16 @@ class RiderListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Rider Records'),
+        title: Text('Rider Records',style: GoogleFonts.openSans(
+          fontSize: 22.sp,
+          fontWeight: FontWeight.w600,
+        ),),
       ),
       body: riders.isEmpty
-          ? Center(child: Text('No riders available.'))
+          ? Center(child: Text('No riders available.',style: GoogleFonts.openSans(
+      fontSize: 22.sp,
+        fontWeight: FontWeight.w600,
+      ),))
           : ListView.builder(
         itemCount: riders.length,
         itemBuilder: (context, index) {
