@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
 import 'package:kantipur_ride/View/Presentation/Rider/rider_login.dart';
+import 'package:kantipur_ride/View/Presentation/Rider/upload_documents.dart';
 import '../../../utils/dt_colors.dart';
 import 'package:kantipur_ride/Components/dt_button.dart';
 
@@ -222,19 +223,32 @@ class _RiderVehicleDetailState extends State<RiderVehicleDetail> {
                       ),),
                     ]),
                 SizedBox(height: 20.h,),
+                // Center(
+                //   child: CustomButton(
+                //     text: 'Submit',
+                //     bottonColor: isFormComplete
+                //         ? AppColors.greenColor // Active green color when complete
+                //         : Colors.grey,         // Grey color when incomplete
+                //     textColor: Colors.white,
+                //     onPressed: isFormComplete
+                //         ? () {
+                //       Get.to(() => RiderDocumentsUpload(), transition: Transition.upToDown);
+                //     }
+                //         : (){}, // Disable button when form is incomplete
+                //     width: double.infinity,
+                //   ),
+                // ),
                 Center(
                   child: CustomButton(
                     text: 'Submit',
-                    bottonColor: isFormComplete
-                        ? AppColors.greenColor // Active green color when complete
-                        : Colors.grey,         // Grey color when incomplete
+                    bottonColor: AppColors.greenColor ,
+                      width: double.infinity,// Grey color when incomplete
                     textColor: Colors.white,
-                    onPressed: isFormComplete
-                        ? () {
-                      Get.to(() => RiderLoginScreen(), transition: Transition.upToDown);
+                    onPressed:  () {
+                      Get.to(() => RiderDocumentsUpload(), transition: Transition.upToDown);
                     }
-                        : (){}, // Disable button when form is incomplete
-                    width: double.infinity,
+
+
                   ),
                 ),
               ],

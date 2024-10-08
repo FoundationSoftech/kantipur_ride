@@ -4,7 +4,6 @@ import 'package:flutter/widgets.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
-import 'package:get/get.dart';
 import '../../../Components/dt_button.dart';
 import '../../../utils/dt_colors.dart';
 import 'otp_verify.dart';

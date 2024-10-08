@@ -20,11 +20,9 @@ class ValidationScreen extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             'Validation',
-
             style: GoogleFonts.roboto(
               fontSize: 26.sp,
               fontWeight: FontWeight.w600,
-
             ),
           ),
         ),

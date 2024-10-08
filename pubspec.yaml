@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.3.3 <4.0.0'
+  sdk: '>=3.3.4 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -38,6 +38,7 @@ dependencies:
 
 
 
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -47,29 +48,34 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^3.0.0
-  flutter_screenutil: ^5.6.0
+  flutter_lints: ^5.0.0
+  flutter_screenutil: ^5.9.3
   google_fonts: ^6.2.1
   fl_chart: ^0.69.0
-  syncfusion_flutter_charts: 25.2.3
+  syncfusion_flutter_charts: ^27.1.51
   device_preview: ^1.1.0
   onboarding: ^4.0.2
   get: ^4.6.6
-  smooth_page_indicator: ^1.2.0
+  smooth_page_indicator: ^1.2.0+3
   intl_phone_field: ^3.2.0
   flutter_otp_text_field: ^1.2.0
-  google_maps_flutter: ^2.5.1
+  google_maps_flutter: ^2.9.0
   permission_handler: ^11.3.1
-  dio: ^5.6.0
-  geolocator: ^11.1.0
-  geocoding: ^2.0.4
+  dio: ^5.7.0
+  geolocator: ^13.0.1
+  geocoding: ^3.0.0
   fluttertoast: ^8.0.9
   http: ^1.1.0
-  shared_preferences: ^2.2.3
-  flutter_svg: ^2.0.9
+  shared_preferences: ^2.3.2
+  flutter_svg: ^2.0.10+1
   image_picker: ^1.1.2
   flutter_polyline_points: ^2.1.0
   slider_button: ^2.1.0
+  esewa_flutter: ^1.1.2
+  animated_splash_screen: ^1.2.0
+
+dependency_overrides:
+  win32: ^5.5.5
 
 
 

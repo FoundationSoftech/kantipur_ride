@@ -123,16 +123,21 @@ class _RideConfirmationScreenState extends State<RideConfirmationScreen> {
                 // Estimated Time of Arrival (ETA)
                 ListTile(
                   leading: Icon(Icons.timer),
-                  title: Text("Estimated Arrival",style: GoogleFonts.openSans(
-    color: AppColors.primaryColor,
-    fontSize: 18.sp,
-    fontWeight: FontWeight.w600,
-    ),),
-                  subtitle: Text("5 mins",style: GoogleFonts.openSans(
-                    color: AppColors.primaryColor,
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w600,
-                  ),),
+                  title: Text(
+                    "Estimated Arrival",
+                    style: GoogleFonts.openSans(
+                      color: AppColors.primaryColor,
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    "5 mins",
+                    style: GoogleFonts.openSans(
+                      color: AppColors.primaryColor,
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w600,
+                    ),),
                 ),
 
                 // Ride Route Map (Actual Map with Google Maps)

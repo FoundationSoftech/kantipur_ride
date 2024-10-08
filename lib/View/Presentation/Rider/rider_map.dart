@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:kantipur_ride/View/Presentation/Rider/ride_in_progress_screen.dart';
+import 'package:kantipur_ride/View/Presentation/Rider/rider_dashboard.dart';
 import 'package:slider_button/slider_button.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:slider_button/slider_button.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 import 'package:get/get.dart';
 
 class RiderMap extends StatefulWidget {
@@ -22,31 +20,44 @@ class _RiderMapState extends State<RiderMap> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: isOnline ? Colors.green : Colors.grey,
-        title: Center(
-          child: SliderButton(
-            action: () async {
-              setState(() {
-                isOnline = !isOnline;
-              });
-              return false;
-            },
-            label: Text(
-              isOnline ? "ONLINE" : "OFFLINE",
-              style: TextStyle(
-                color: isOnline ? Colors.white : Color(0xff4a4a4a),
-                fontWeight: FontWeight.w500,
-                fontSize: 17.sp,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            SliderButton(
+              width: 250.w,
+              action: () async {
+                setState(() {
+                  isOnline = !isOnline;
+                });
+                return false;
+              },
+              label: Text(
+                isOnline ? "ONLINE" : "OFFLINE",
+                style: TextStyle(
+                  color: isOnline ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 16.sp,
+                ),
               ),
+              icon: Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.black,
+                size: 16.sp,
+              ),
+              backgroundColor: isOnline ? Colors.green.shade200 : Colors.grey.shade400,
+              buttonColor: isOnline ? Colors.white : Colors.red.shade300,
+              highlightedColor: Colors.green.shade300,
             ),
-            icon: Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.black,
-            ),
-            backgroundColor: isOnline ? Colors.green : Colors.grey,
-            buttonColor: isOnline ? Colors.white : Colors.red,
-          ),
+            SizedBox(width: 30.w,),
+            InkWell(
+              onTap: (){
+                Get.to(()=>RiderDashboard(),transition: Transition.upToDown);
+              },
+                child: Icon(Icons.person,size: 50.h,color: Colors.white,)),
+          ],
         ),
       ),
+
       body: Stack(
         children: [
           GoogleMap(

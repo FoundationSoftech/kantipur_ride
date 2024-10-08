@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:kantipur_ride/Components/expanded_bottom_nav_bar.dart';
+import 'package:kantipur_ride/View/Presentation/Rider/rider_dashboard.dart';
 import 'package:kantipur_ride/View/Presentation/Rider/vehicle_option.dart';
 import 'package:kantipur_ride/View/Presentation/user_dashboard/user_dashboard_screen.dart';
 import 'package:kantipur_ride/utils/dt_colors.dart';
+
+import '../Rider/rider_map.dart';
 
 
 class OTPRiderScreen extends StatefulWidget {
@@ -101,7 +104,7 @@ class _OTPRiderScreenState extends State<OTPRiderScreen> {
             SizedBox(height: 30.h),
             ElevatedButton(
               onPressed: () {
-                Navigator.of(context).push(MaterialPageRoute(builder: (context) => VehicleOption()));
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => RiderMap()));
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.greenColor,

@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:get/get.dart';
 import 'package:kantipur_ride/Components/expanded_bottom_nav_bar.dart';
+import 'package:kantipur_ride/View/Presentation/Rider/vehicle_option.dart';
+import 'package:kantipur_ride/View/Presentation/user_dashboard/user_dashboard_screen.dart';
 import 'package:kantipur_ride/utils/dt_colors.dart';
 
-import '../user_dashboard/user_profile_form.dart';
 
-
-class OTPScreen extends StatefulWidget {
+class OTPRiderRegisterScreen extends StatefulWidget {
   @override
-  _OTPScreenState createState() => _OTPScreenState();
+  _OTPRiderRegisterScreenState createState() => _OTPRiderRegisterScreenState();
 }
 
-class _OTPScreenState extends State<OTPScreen> {
+class _OTPRiderRegisterScreenState extends State<OTPRiderRegisterScreen> {
   final TextEditingController _controller1 = TextEditingController();
   final TextEditingController _controller2 = TextEditingController();
   final TextEditingController _controller3 = TextEditingController();
@@ -63,37 +62,6 @@ class _OTPScreenState extends State<OTPScreen> {
     super.dispose();
   }
 
-  void _submitOTP() {
-    String otp = _controller1.text +
-        _controller2.text +
-        _controller3.text +
-        _controller4.text +
-        _controller5.text +
-        _controller6.text;
-
-    if (otp.length == 6) {
-      bool isProfileComplete = _checkProfileCompletion();
-
-      if (isProfileComplete) {
-        // Navigate to the main app screen
-        Get.off(() => ExpandedBottomNavBar(), transition: Transition.rightToLeft);
-      } else {
-        // Navigate to profile completion screen
-        Get.off(() => ProfileCompletionScreen(), transition: Transition.rightToLeft);
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter the complete OTP')),
-      );
-    }
-  }
-
-  bool _checkProfileCompletion() {
-    // Implement the logic to check if the profile is complete
-    // Replace this with the actual condition, e.g., fetching from a server or checking stored data
-    return false; // For demonstration, assuming the profile is incomplete
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -132,7 +100,9 @@ class _OTPScreenState extends State<OTPScreen> {
             ),
             SizedBox(height: 30.h),
             ElevatedButton(
-              onPressed: _submitOTP,
+              onPressed: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => VehicleOption()));
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.greenColor,
                 padding: EdgeInsets.symmetric(vertical: 16.h),

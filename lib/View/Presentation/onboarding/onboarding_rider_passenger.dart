@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kantipur_ride/Components/dt_button.dart';
 import 'package:kantipur_ride/View/Presentation/Rider/rider_login.dart';
 import 'package:kantipur_ride/View/Presentation/Admin/admin_login.dart';
+import 'package:kantipur_ride/View/Presentation/onboarding/login_screen.dart';
 import 'package:kantipur_ride/View/Presentation/onboarding/register_user.dart';
 import 'package:kantipur_ride/utils/dt_colors.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -49,7 +50,7 @@ class OnboardingRiderPassenger extends StatelessWidget {
                     textColor: Colors.white,
                     bottonColor: AppColors.purpleColor,
                     onPressed: () {
-                      Get.to(() => UserRegister(), transition: Transition.upToDown);
+                      Get.to(() => LoginScreen(), transition: Transition.upToDown);
                     },
         
                   ),

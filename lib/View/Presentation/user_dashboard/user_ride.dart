@@ -7,8 +7,10 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:get/get.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:kantipur_ride/Components/dt_button.dart';
-import 'package:kantipur_ride/View/Presentation/user_dashboard/passenger_ride_tracking.dart';
 import 'package:kantipur_ride/View/Presentation/user_dashboard/ride_confirm.dart';
+
+import 'package:geolocator/geolocator.dart';
+import 'package:kantipur_ride/View/Presentation/user_dashboard/rider_request.dart';
 
 class RideSharingScreen extends StatefulWidget {
   @override
@@ -18,17 +20,110 @@ class RideSharingScreen extends StatefulWidget {
 class _RideSharingScreenState extends State<RideSharingScreen> {
   GoogleMapController? mapController;
   Set<Polyline> _polylines = {};
-  LatLng sourceLocation = LatLng(27.7172, 85.3240); // Initial position (source)
+  LatLng sourceLocation = LatLng(27.7172, 85.3240); // Default source location (manual entry or fallback)
   LatLng? destinationLocation;
   Marker? destinationMarker;
+  Marker? sourceMarker;
 
   String? sourceAddress;
   String? destinationAddress;
 
+
+  void _searchDestination(String query) async {
+    try {
+      // Get the destination's location based on the address
+      List<Location> locations = await locationFromAddress(query);
+      if (locations.isNotEmpty) {
+        LatLng dest = LatLng(locations.first.latitude, locations.first.longitude);
+
+        // Update the state with the new destination location and add marker
+        setState(() {
+          destinationLocation = dest;
+          destinationMarker = Marker(
+            markerId: MarkerId("destination"),
+            position: dest,
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          );
+
+          // Move the camera to the destination location
+          mapController?.animateCamera(
+            CameraUpdate.newLatLngZoom(dest, 14),  // Animate to the searched location
+          );
+        });
+
+        // Fetch the address for the destination
+        String address = await _getAddressFromLatLng(dest);
+        setState(() {
+          destinationAddress = address;
+        });
+
+        // Optionally, draw a route between the source and destination
+        await _drawRoute(sourceLocation, dest);
+      }
+    } catch (e) {
+      print("Error searching location: $e");
+    }
+  }
+
+
+  // Function to get user's current location
+  Future<void> _getCurrentLocation() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      LatLng currentLatLng = LatLng(position.latitude, position.longitude);
+
+      // Update the map and source location
+      setState(() {
+        sourceLocation = currentLatLng;
+        sourceMarker = Marker(
+          markerId: MarkerId("currentLocation"),
+          position: currentLatLng,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        );
+      });
+
+      mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(currentLatLng, 14),
+      );
+
+      // Get address from the current location coordinates
+      // sourceAddress = await _getAddressFromLatLng(currentLatLng);
+    } catch (e) {
+      print("Error fetching current location: $e");
+    }
+  }
+
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Test if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('Location permissions are denied.');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error('Location permissions are permanently denied.');
+    }
+
+    // Get the current position
+    return await Geolocator.getCurrentPosition();
+  }
+
   Future<String> _getAddressFromLatLng(LatLng position) async {
     try {
       List<Placemark> placemarks =
-          await placemarkFromCoordinates(position.latitude, position.longitude);
+      await placemarkFromCoordinates(position.latitude, position.longitude);
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
         return "${place.street ?? ''}, ${place.locality ?? ''}, ${place.country ?? ''}"
@@ -37,15 +132,19 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
     } catch (e) {
       print("Error getting address: $e");
     }
-    return "Unknown location"; // Provide a default or more meaningful error message.
+    return "Unknown location";
   }
 
-  @override
   void initState() {
     super.initState();
-    _getAddressFromLatLng(sourceLocation).then((address) {
+    _determinePosition().then((position) {
       setState(() {
-        sourceAddress = address;
+        sourceLocation = LatLng(position.latitude, position.longitude);
+      });
+      _getAddressFromLatLng(sourceLocation!).then((address) {
+        setState(() {
+          sourceAddress = address;
+        });
       });
     });
   }
@@ -65,7 +164,7 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
               mapController = controller;
             },
             markers: _createMarkers(),
-            polylines: _polylines, // Display polylines for the route
+            polylines: _polylines,
           ),
 
           // Action buttons
@@ -75,25 +174,14 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
             child: Column(
               children: [
                 FloatingActionButton(
-                  onPressed: () {
-                    // Action for checking ride status or similar
-                  },
-                  child: Icon(Icons.check),
+                  onPressed: _showPickupOptionDialog, // Provide option for manual or automatic pickup
+                  child: Icon(Icons.pin_drop),
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.green,
                 ),
                 SizedBox(height: 10),
                 FloatingActionButton(
-                  onPressed: () {
-                    // Action for settings or layers
-                  },
-                  child: Icon(Icons.settings),
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.green,
-                ),
-                SizedBox(height: 10.h),
-                FloatingActionButton(
-                  onPressed: _goToMyLocation, // Center map on user location
+                  onPressed: _goToMyLocation,
                   child: Icon(Icons.my_location),
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.green,
@@ -108,24 +196,24 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
             left: 16,
             right: 16,
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              padding: EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(8.r),
+                borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.2),
-                    blurRadius: 6.r,
+                    blurRadius: 6,
                   ),
                 ],
               ),
               child: Row(
                 children: [
                   Icon(Icons.search, color: Colors.grey),
-                  SizedBox(width: 10.w),
+                  SizedBox(width: 10),
                   Expanded(
                     child: TextField(
-                      onSubmitted: _searchDestination, // Perform search
+                      onSubmitted: _searchDestination,
                       decoration: InputDecoration(
                         hintText: "Search destination",
                         border: InputBorder.none,
@@ -143,7 +231,7 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
             ),
           ),
 
-          // Bottom saved addresses panel as a persistent bottom sheet
+          // Bottom saved addresses panel
           Positioned(
             bottom: 0,
             left: 0,
@@ -155,17 +243,48 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
     );
   }
 
-  // Create markers for the source and destination
   Set<Marker> _createMarkers() {
     return {
+      if (sourceMarker != null) sourceMarker!,
       if (destinationMarker != null) destinationMarker!,
-      Marker(
-        markerId: MarkerId("source"),
-        position: sourceLocation,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      ),
     };
   }
+
+  // Show a dialog to choose between entering a manual pickup location or using current location
+  void _showPickupOptionDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Select Pickup Location"),
+          content: Text("Would you like to use your current location or enter it manually?"),
+          actions: [
+            TextButton(
+              child: Text("Use Current Location"),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _getCurrentLocation();
+              },
+            ),
+            TextButton(
+              child: Text("Enter Manually"),
+              onPressed: () {
+                Navigator.of(context).pop();
+                // You can implement manual location entry here
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _goToMyLocation() {
+    _getCurrentLocation();
+  }
+
+
+
 
   // Function to draw a route using the Google Directions API
   Future<void> _drawRoute(LatLng origin, LatLng destination) async {
@@ -209,10 +328,7 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
     }
   }
 
-  // Function to go to the user's location (stubbed here, requires location services)
-  void _goToMyLocation() {
-    // Logic to center the map on the user's current location.
-  }
+
 
   // Build the bottom sheet dynamically with updated address
   Widget _buildBottomSheet() {
@@ -254,6 +370,7 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
                 children: [
                   Icon(Icons.phone, color: Colors.green),
                   Icon(Icons.message, color: Colors.blue),
+
                 ],
               ),
             ],
@@ -305,42 +422,16 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
           CustomButton(
               text: 'Confirm Ride',
               onPressed: () {
-                Get.to(() => RideConfirmationScreen(), transition: Transition.upToDown);
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return RiderRequestUser();  // Show the rider request dialog
+                  },
+                );
+
               })
         ],
       ),
     );
-  }
-
-  // Function to search destination and update address
-  void _searchDestination(String query) async {
-    try {
-      List<Location> locations = await locationFromAddress(query);
-      if (locations.isNotEmpty) {
-        LatLng dest =
-            LatLng(locations.first.latitude, locations.first.longitude);
-        setState(() {
-          destinationLocation = dest;
-          destinationMarker = Marker(
-            markerId: MarkerId("destination"),
-            position: dest,
-            icon:
-                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          );
-          mapController?.animateCamera(CameraUpdate.newLatLngZoom(dest, 14));
-        });
-
-        // Fetch address for the destination
-        String address = await _getAddressFromLatLng(dest);
-        setState(() {
-          destinationAddress = address;
-        });
-
-        // Fetch and draw the route from the source to the destination
-        await _drawRoute(sourceLocation, dest);
-      }
-    } catch (e) {
-      print("Error searching location: $e");
-    }
   }
 }

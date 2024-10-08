@@ -12,4 +12,5 @@ class AppColors {
   static const Color appleRedColor =  Color(0xffEE101f);
   static const Color backgroundColor = Color(0xff313131);
   static const Color greenColor = Color(0xFF27AE60);
+  static const Color cardColor = Color(0xff272A33);
 }

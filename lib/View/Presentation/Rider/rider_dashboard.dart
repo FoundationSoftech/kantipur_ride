@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-
-import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:kantipur_ride/Components/dt_button.dart';
 import 'package:kantipur_ride/View/Presentation/onboarding/onboarding_rider_passenger.dart';
+import 'package:kantipur_ride/utils/dt_colors.dart';
 
 class RiderDashboard extends StatefulWidget {
   @override
@@ -26,7 +24,7 @@ class _RiderDashboardState extends State<RiderDashboard> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.all(16.0),
+          padding: EdgeInsets.symmetric(horizontal: 16.w,vertical: 16.h),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -35,7 +33,7 @@ class _RiderDashboardState extends State<RiderDashboard> {
                 child: Column(
                   children: [
                     CircleAvatar(
-                      radius: 50,
+                      radius: 50.r,
                       backgroundImage: AssetImage('assets/profile_image.png'), // Replace with actual image
                     ),
                     SizedBox(height: 10.h),
@@ -69,7 +67,7 @@ class _RiderDashboardState extends State<RiderDashboard> {
                           vertical: 12.h,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(30.r),
                         ),
                       ),
                       child: Text(
@@ -92,7 +90,7 @@ class _RiderDashboardState extends State<RiderDashboard> {
                   borderRadius: BorderRadius.circular(15.r),
                 ),
                 child: Padding(
-                  padding: EdgeInsets.all(16.0),
+                  padding: EdgeInsets.symmetric(horizontal: 16.w,vertical: 16.h),
                   child: Column(
                     children: [
                       Text(
@@ -114,8 +112,16 @@ class _RiderDashboardState extends State<RiderDashboard> {
                       SizedBox(height: 10.h),
                       Text(
                         "Total Trips: $totalTrips",
-                        style: TextStyle(fontSize: 16.sp),
+                        style: TextStyle(fontSize: 16.sp,fontWeight: FontWeight.w500),
                       ),
+                      CustomButton(
+                        borderRadius: 20.r,
+                          text: 'View Full Ride Summary',
+
+                          onPressed: (){
+                          Get.to(()=>RideSummaryPage(totalTrips: totalTrips, earnings: earnings));
+
+                      })
                     ],
                   ),
                 ),
@@ -151,25 +157,11 @@ class _RiderDashboardState extends State<RiderDashboard> {
                         style: TextStyle(fontSize: 14.sp),
                       ),
                       SizedBox(height: 10.h),
-                      ElevatedButton(
-                        onPressed: () {
-                          // Navigate to Ride Tracking screen
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: EdgeInsets.symmetric(horizontal: 30.w, vertical: 10.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30.r),
-                          ),
-                        ),
-                        child: Text(
-                          "TRACK RIDE",
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            color: Colors.white,
-                          ),
-                        ),
+                      CustomButton(
+                          text: 'TRACK RIDE', onPressed: (){},
+                        borderRadius: 20.r,
                       ),
+
                     ],
                   ),
                 ),
@@ -208,30 +200,138 @@ class _RiderDashboardState extends State<RiderDashboard> {
 
               // Logout Button
               Center(
-                child: ElevatedButton(
-                  onPressed: () {
-                    Get.to(()=>OnboardingRiderPassenger(),transition: Transition.upToDown);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: EdgeInsets.symmetric(horizontal: 40.w, vertical: 10.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30.r),
-                    ),
-                  ),
-                  child: Text(
-                    "LOGOUT",
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                child: CustomButton(
+                  
+                  borderRadius: 20.r,
+                    width: 200.w,
+                    bottonColor: AppColors.appleRedColor,
+                    textColor: Colors.white,
+                    text: 'LOGOUT', onPressed: (){
+                      Get.offAll(()=>OnboardingRiderPassenger(),transition: Transition.upToDown);
+                }),
               ),
+
+
+
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+
+class RideSummaryPage extends StatelessWidget {
+  final int totalTrips;
+  final double earnings;
+
+  RideSummaryPage({required this.totalTrips, required this.earnings});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.green,
+        title: Text("Ride Summary"),
+        centerTitle: true,
+        elevation: 0,
+      ),
+      body: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(height: 20.h),
+
+            // Total Rides Card
+            Card(
+              elevation: 5,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15.r),
+              ),
+              color: Colors.white,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 30.h),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.directions_car_rounded,
+                      size: 50.sp,
+                      color: Colors.green,
+                    ),
+                    SizedBox(height: 20.h),
+                    Text(
+                      "Total Rides Completed",
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+                    Text(
+                      "$totalTrips",
+                      style: TextStyle(
+                        fontSize: 36.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            SizedBox(height: 30.h),
+
+            // Total Earnings Card
+            Card(
+              elevation: 5,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15.r),
+              ),
+              color: Colors.white,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 30.h),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.attach_money_rounded,
+                      size: 50.sp,
+                      color: Colors.green,
+                    ),
+                    SizedBox(height: 20.h),
+                    Text(
+                      "Total Earnings",
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+                    Text(
+                      "₨$earnings",
+                      style: TextStyle(
+                        fontSize: 36.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+
+
+            // View Detailed Rides Button
+
+          ],
+        ),
+      ),
+      backgroundColor: Color(0xFFF3F4F6), // Light background color for contrast
     );
   }
 }
