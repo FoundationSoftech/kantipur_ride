@@ -1,10 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:kantipur_ride/Components/dt_button.dart';
+import 'package:kantipur_ride/View/Presentation/payment/esewa_payment.dart';
+import 'package:kantipur_ride/utils/dt_colors.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
-class VehiclesDetailScreen extends StatelessWidget {
+class VehiclesDetailScreen extends StatefulWidget {
+  @override
+  _VehiclesDetailScreenState createState() => _VehiclesDetailScreenState();
+}
+
+class _VehiclesDetailScreenState extends State<VehiclesDetailScreen> {
   final PageController _pageController = PageController();
+  DateTime? rentDate;
+  DateTime? returnDate;
+  String rentType = 'Rent with driver';
+  bool showLicenseField = false;
+  bool _agreedToTerms = false;
+
+  Future<void> _selectDate(BuildContext context, bool isRentDate) async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2022),
+      lastDate: DateTime(2025),
+    );
+    if (pickedDate != null && pickedDate != rentDate) {
+      setState(() {
+        if (isRentDate) {
+          rentDate = pickedDate;
+        } else {
+          returnDate = pickedDate;
+        }
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +151,7 @@ class VehiclesDetailScreen extends StatelessWidget {
                           ),
                           SizedBox(height: 10.h),
                           Text(
-                            "An old-school, post-war design built around an engine that one can count on. That's Classic, the machine that bears on simple pleasures of motorcycling, while being dependable enough to ride through any terrain.",
+                            "An old-school, post-war design built around an engine that one can count on...",
                             style: GoogleFonts.roboto(
                               fontSize: 16.sp,
                               color: Colors.grey[700],
@@ -137,36 +170,99 @@ class VehiclesDetailScreen extends StatelessWidget {
                             ],
                           ),
                           SizedBox(height: 20.h),
+
+                          // Select Rent & Return Dates
+                          buildDateSelector("Renting Date", rentDate, true),
+                          SizedBox(height: 20.h),
+                          buildDateSelector("Returning Date", returnDate, false),
+
+                          SizedBox(height: 20.h),
+                          // Select Rent Type
+                          Text("Select Rent Type:", style: GoogleFonts.poppins(fontSize: 16.sp)),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: RadioListTile(
+                                  title: Text("Rent with driver",style: GoogleFonts.abyssinicaSil(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.bold,
+
+                                  ),),
+                                  value: 'Rent with driver',
+                                  groupValue: rentType,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      rentType = value.toString();
+                                      showLicenseField = false;
+                                    });
+                                  },
+                                ),
+                              ),
+                              Expanded(
+                                child: RadioListTile(
+                                  title: Text("Rent without driver",style: GoogleFonts.abyssinicaSil(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16.sp,
+                                  ),),
+                                  value: 'Rent without driver',
+                                  groupValue: rentType,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      rentType = value.toString();
+                                      showLicenseField = true;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 10.h),
+
+                          // License Field if Rent without driver
+                          if (showLicenseField)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Enter Driving License Number", style: GoogleFonts.poppins(fontSize: 16.sp)),
+                                TextField(
+                                  decoration: InputDecoration(
+                                    hintText: "License Number",
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                SizedBox(height: 20.h),
+                              ],
+                            ),
+                          CheckboxListTile(
+                            value: _agreedToTerms,
+                            onChanged: (bool? newValue) {
+                              setState(() {
+                                _agreedToTerms = newValue ?? false;
+                              });
+                            },
+                            title: Text("Agree to terms and conditions", style: GoogleFonts.poppins(fontSize: 14.sp)),
+                          )
+
                         ],
                       ),
                     ),
                   ),
                 ),
                 SizedBox(height: 20.h),
-
-                // Rent Now Button
                 Center(
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(horizontal: 80.w, vertical: 15.h),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30.r),
-                      ),
-                      backgroundColor: Colors.blueAccent.shade700,
-                      shadowColor: Colors.blueAccent.withOpacity(0.3),
-                      elevation: 8,
-                    ),
-                    child: Text(
-                      "Rent Now",
-                      style: GoogleFonts.poppins(
-                        fontSize: 18.sp,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  child: CustomButton(
+                      text: 'Rent Now',
+                      textColor: Colors.white,
+                      width: 200.w,
+                      onPressed: (){
+                        Get.to(()=> EsewaApp(title: ''));
+                      },
+                    bottonColor: AppColors.greenColor,
+                    borderRadius: 20.r,
                   ),
                 ),
+
+
                 SizedBox(height: 30.h),
               ],
             ),
@@ -198,6 +294,26 @@ class VehiclesDetailScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  // Widget to build date selector
+  Widget buildDateSelector(String label, DateTime? date, bool isRentDate) {
+    return GestureDetector(
+      onTap: () => _selectDate(context, isRentDate),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(fontSize: 16.sp,fontWeight: FontWeight.bold),
+          ),
+          Text(
+            date != null ? DateFormat.yMd().format(date) : "Select Date",
+            style: GoogleFonts.roboto(fontSize: 16.sp, color: Colors.grey[800],fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
     );
   }
 }

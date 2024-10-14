@@ -6,6 +6,7 @@ import 'package:kantipur_ride/View/Presentation/onboarding/onboarding_view.dart'
 import 'package:get/get.dart';
 import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:kantipur_ride/View/Presentation/user_dashboard/rider_request.dart';
+import 'package:kantipur_ride/scheduled_ride/scheduled_ride.dart';
 import 'View/Presentation/onboarding/onboarding_rider_passenger.dart';
 import 'View/Presentation/payment/esewa_payment.dart';
 
@@ -40,7 +41,7 @@ class MyApp extends StatelessWidget {
             splashTransition: SplashTransition.scaleTransition,
             backgroundColor: Colors.black,
             duration: 4000,
-            nextScreen: OnboardingView(),
+            nextScreen: RideScheduleApp(),
             // nextScreen: RiderRequestUser(),
           ),
           // home: RiderLoginScreen(),

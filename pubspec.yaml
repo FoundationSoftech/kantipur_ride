@@ -74,6 +74,7 @@ dev_dependencies:
   esewa_flutter: ^1.1.2
   animated_splash_screen: ^1.2.0
 
+
 dependency_overrides:
   win32: ^5.5.5
 
