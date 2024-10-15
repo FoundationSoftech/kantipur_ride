@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:kantipur_ride/View/Presentation/Rider/validation.dart';
 import 'package:kantipur_ride/View/Presentation/Rider/verify_rider.dart';
 import 'package:kantipur_ride/View/Presentation/onboarding/otp_verify_rider.dart';
 import 'package:kantipur_ride/utils/dt_colors.dart';
 import 'package:get/get.dart';
-
 
 class RiderLoginScreen extends StatefulWidget {
   const RiderLoginScreen({Key? key}) : super(key: key);

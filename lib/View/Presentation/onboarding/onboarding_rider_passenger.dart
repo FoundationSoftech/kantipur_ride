@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:kantipur_ride/Components/dt_button.dart';
+import 'package:kantipur_ride/Schedule/ride_schedule_screen.dart';
+import 'package:kantipur_ride/Schedule/schedule_login.dart';
 import 'package:kantipur_ride/View/Presentation/Rider/rider_login.dart';
 import 'package:kantipur_ride/View/Presentation/Admin/admin_login.dart';
 import 'package:kantipur_ride/View/Presentation/onboarding/login_screen.dart';
@@ -65,6 +67,16 @@ class OnboardingRiderPassenger extends StatelessWidget {
                       Get.to(() => AdminLoginScreen(), transition: Transition.upToDown);
                     },
 
+                  ),
+                  SizedBox(height: 50.h),
+                  CustomButton(
+                    text: 'Schedule your ride',
+                    textColor: Colors.white,
+                    bottonColor: AppColors.primaryColor,
+                    onPressed: () {
+                      Get.to(() => ScheduleLogin(),
+                          transition: Transition.upToDown);
+                    },
                   ),
                 ],
               ),
