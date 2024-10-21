@@ -61,7 +61,6 @@ dev_dependencies:
   flutter_otp_text_field: ^1.2.0
   google_maps_flutter: ^2.9.0
   permission_handler: ^11.3.1
-  dio: ^5.7.0
   geolocator: ^13.0.1
   geocoding: ^3.0.0
   fluttertoast: ^8.0.9
@@ -73,6 +72,8 @@ dev_dependencies:
   slider_button: ^2.1.0
   esewa_flutter: ^1.1.2
   animated_splash_screen: ^1.2.0
+  email_auth: ^1.0.0
+  dio: ^5.7.0
 
 
 dependency_overrides:

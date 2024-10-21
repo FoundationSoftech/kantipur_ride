@@ -160,17 +160,4 @@ class UserRegister extends StatelessWidget {
 
 
 
-class MainAppScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // The screen shown after successful login/registration and profile completion
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Welcome to the App"),
-      ),
-      body: Center(
-        child: Text("Main App Content Goes Here"),
-      ),
-    );
-  }
-}
+

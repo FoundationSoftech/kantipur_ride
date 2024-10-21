@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kantipur_ride/Components/dt_button.dart';
-import 'package:kantipur_ride/View/Presentation/onboarding/login_screen.dart';
+import 'package:kantipur_ride/View/Presentation/onboarding/user_register_screen.dart';
 import 'package:kantipur_ride/View/Presentation/onboarding/onboarding_rider_passenger.dart';
 import '../../../utils/dt_colors.dart';
 import 'onboarding_item.dart';

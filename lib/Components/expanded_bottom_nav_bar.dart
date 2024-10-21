@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:kantipur_ride/View/Presentation/user_dashboard/schedule_ride.dart';
 import 'package:kantipur_ride/View/Presentation/user_dashboard/user_dashboard_screen.dart';
 import '../Controller/expanded_nav_controller.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -52,7 +53,7 @@ class _ExpandedBottomNavBarState extends State<ExpandedBottomNavBar> {
               ? AppColors.redColor
               : Colors.black
         )),
-        label: 'For you',
+        label: 'Schedule Ride',
       ),
       BottomNavigationBarItem(
         icon: Obx(
@@ -73,11 +74,9 @@ class _ExpandedBottomNavBarState extends State<ExpandedBottomNavBar> {
     ];
 
     var navBody = [
-     UserDashboardScreen(),
-      Container(),
+      UserDashboardScreen(),
+      ScheduleRide(),
       RentalOnboarding(),
-
-
     ];
 
     return WillPopScope(

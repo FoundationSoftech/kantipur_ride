@@ -4,9 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:kantipur_ride/Components/expanded_bottom_nav_bar.dart';
 import 'package:kantipur_ride/utils/dt_colors.dart';
-
-import '../user_dashboard/user_profile_form.dart';
-
+import 'package:dio/dio.dart' as dio;
 
 class OTPScreen extends StatefulWidget {
   @override
@@ -27,6 +25,47 @@ class _OTPScreenState extends State<OTPScreen> {
   final FocusNode _focusNode4 = FocusNode();
   final FocusNode _focusNode5 = FocusNode();
   final FocusNode _focusNode6 = FocusNode();
+
+  void _submitOTP() async {
+    String otp = _controller1.text +
+        _controller2.text +
+        _controller3.text +
+        _controller4.text +
+        _controller5.text +
+        _controller6.text;
+
+    if (otp.length == 6) {
+      try {
+        dio.Response response = await dio.Dio().post(
+          'https://kantipur-rides-backend.onrender.com/api/v1/user/verifyCode',
+          data: {
+            'code': otp, // Use the otp variable
+          },
+        );
+
+        if (response.data['success']) {
+          print('OTP validated');
+          Get.off(() => ExpandedBottomNavBar(), transition: Transition.rightToLeft);
+
+          // }
+        } else {
+          // Handle the case when OTP verification fails
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Invalid OTP. Please try again.')),
+          );
+        }
+      } on dio.DioError catch (e) {
+        // Handle error (e.g., network error, server error)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.message}')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter the complete OTP')),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -61,37 +100,6 @@ class _OTPScreenState extends State<OTPScreen> {
     _focusNode5.dispose();
     _focusNode6.dispose();
     super.dispose();
-  }
-
-  void _submitOTP() {
-    String otp = _controller1.text +
-        _controller2.text +
-        _controller3.text +
-        _controller4.text +
-        _controller5.text +
-        _controller6.text;
-
-    if (otp.length == 6) {
-      bool isProfileComplete = _checkProfileCompletion();
-
-      if (isProfileComplete) {
-        // Navigate to the main app screen
-        Get.off(() => ExpandedBottomNavBar(), transition: Transition.rightToLeft);
-      } else {
-        // Navigate to profile completion screen
-        Get.off(() => ProfileCompletionScreen(), transition: Transition.rightToLeft);
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter the complete OTP')),
-      );
-    }
-  }
-
-  bool _checkProfileCompletion() {
-    // Implement the logic to check if the profile is complete
-    // Replace this with the actual condition, e.g., fetching from a server or checking stored data
-    return false; // For demonstration, assuming the profile is incomplete
   }
 
   @override
