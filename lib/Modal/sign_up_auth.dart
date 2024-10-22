@@ -24,6 +24,7 @@ class SignUpAuth {
 
         if (verificationResponse.success == true) {
           print("Verification code sent to email");
+          // final String token = responseData['data']['token'];
           return true;
         } else {
           print(

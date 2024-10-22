@@ -8,12 +8,10 @@ class PrefrencesManager extends GetxController {
   RxString email = ''.obs;
   RxString username = ''.obs;
 
-
   Future<void> saveToken(String? token) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString('authToken', token ?? '');
   }
-
 
   Future<void> saveAuthToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
@@ -21,26 +19,23 @@ class PrefrencesManager extends GetxController {
     print('Token saved successfully!');
   }
 
-
-
   Future<void> clearAuthToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
   }
-
 
   Future<void> saveuserId(int? id) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setInt('userId', id ?? 0);
     userId.value = id ?? 0;
   }
+
   Future<String?> getAuthToken() async {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('auth_token');
     print('Retrieved token: $token');
     return token;
   }
-
 
   Future<int> getuserId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -101,5 +96,4 @@ class PrefrencesManager extends GetxController {
     email.value = '';
     print('Session cleared successfully!');
   }
-
 }

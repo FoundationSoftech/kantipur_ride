@@ -5,7 +5,6 @@ import 'package:device_preview/device_preview.dart';
 import 'package:get/get.dart';
 import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:kantipur_ride/Components/expanded_bottom_nav_bar.dart';
-import 'View/Presentation/onboarding/register_user.dart';
 import 'View/Presentation/onboarding/user_login_screen.dart';
 import 'controller/option_controller.dart';
 import 'controller/shared_preferences.dart';

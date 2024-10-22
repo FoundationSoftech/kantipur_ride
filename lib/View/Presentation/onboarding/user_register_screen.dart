@@ -150,7 +150,7 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
 
                 SizedBox(height: 30.h,),
                 CustomButton(
-                    text: 'Register',
+                    text: 'Proceed',
                     bottonColor: AppColors.greenColor,
                     textColor: Colors.white,
                     onPressed: () async {
