@@ -5,16 +5,20 @@ import 'package:flutter/widgets.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:kantipur_ride/Components/expanded_bottom_nav_bar.dart';
 import 'package:kantipur_ride/View/Presentation/onboarding/user_login_screen.dart';
 import '../../../Components/dt_button.dart';
 import '../../../Controller/user_register_controller.dart';
+import '../../../controller/user_login_controller.dart';
 import '../../../utils/dt_colors.dart';
 import 'otp_verify.dart';
 import 'package:email_auth/email_auth.dart';
 import 'package:get/get.dart';
 
 class UserRegisterScreen extends StatefulWidget {
-  const UserRegisterScreen({super.key});
+  final String email;
+
+  UserRegisterScreen({required this.email});
 
   @override
   State<UserRegisterScreen> createState() => _UserRegisterScreenState();
@@ -25,6 +29,7 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
 
   final TextEditingController _emailController = TextEditingController();
   final SignUpController signUpController = Get.put(SignUpController());
+  final UserLoginController userLoginController = Get.put(UserLoginController());
 
   FocusNode focusNode = FocusNode();
   bool isPhoneValid = false;
@@ -60,6 +65,9 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Pre-fill the email controller with the passed email
+    final signUpController = Get.put(SignUpController());
+    signUpController.emailController.text = widget.email;
     return Scaffold(
       appBar: AppBar(),
       body: Padding(
@@ -150,82 +158,99 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
 
                 SizedBox(height: 30.h,),
                 CustomButton(
-                    text: 'Proceed',
-                    bottonColor: AppColors.greenColor,
-                    textColor: Colors.white,
-                    onPressed: () async {
-                      Get.dialog(Center(
-                        child: CircularProgressIndicator(),
-                      ));
+                  text: 'Proceed',
+                  bottonColor: AppColors.greenColor,
+                  textColor: Colors.white,
+                  onPressed: () async {
+                    // Show loading dialog
+                    Get.dialog(
+                      Center(child: CircularProgressIndicator()),
+                      barrierDismissible: false, // Prevent closing the dialog
+                    );
 
-                      // Print request payload for debugging purposes
-                      print('Request Payload:');
-                      print(
-                          'Username: ${signUpController.nameController.text}');
-                      print('Number: ${signUpController.mobileNumberController.text}');
-                      print('Email: ${signUpController.emailController.text}');
+                    // Debug prints for request payload
+                    print('Request Payload:');
+                    print('Username: ${signUpController.nameController.text}');
+                    print('Number: ${signUpController.mobileNumberController.text}');
+                    print('Email: ${signUpController.emailController.text}');
 
+                    // Check for empty fields
+                    if (signUpController.nameController.text.isEmpty ||
+                        signUpController.emailController.text.isEmpty ||
+                        signUpController.mobileNumberController.text.isEmpty) {
+                      print('Empty fields, showing snackbar');
+                      Get.back(); // Close loading dialog
+                      Get.snackbar(
+                        'Alert',
+                        'Please fill all the fields',
+                        snackPosition: SnackPosition.TOP,
+                        backgroundColor: Colors.red,
+                        colorText: Colors.white,
+                      );
+                    }
 
-                      // Check if any field is empty
-                      if (signUpController.nameController.text.isEmpty ||
-                          signUpController.emailController.text.isEmpty ||
-                         signUpController.mobileNumberController.text.isEmpty
-                          ) {
-                        print('Empty fields, showing snackbar');
-                        Get.back(); // Close the dialog
-                        Get.snackbar(
-                          'Alert',
-                          'Please fill all the fields',
-                          snackPosition: SnackPosition.TOP,
-                          backgroundColor: Colors.red,
-                          colorText: Colors.white,
-                        );
+                    // Validate email
+                    else if (!isValidEmail(signUpController.emailController.text)) {
+                      print('Invalid email, showing snackbar');
+                      Get.back(); // Close loading dialog
+                      Get.snackbar(
+                        'Alert',
+                        'Please enter a valid email',
+                        snackPosition: SnackPosition.TOP,
+                        backgroundColor: Colors.red,
+                        colorText: Colors.white,
+                      );
+                    }
+
+                    // If validation passes, proceed with sign-up
+                    else {
+                      bool success = await signUpController.signUpPressed(
+                        name: signUpController.nameController.text.trim(),
+                        email: signUpController.emailController.text.trim(),
+                        mobileNumber: signUpController.mobileNumberController.text.trim(),
+                      );
+
+                      // Debugging success response
+                      if (kDebugMode) {
+                        print('CreateUser success: $success');
                       }
-                      // Check if email is valid
-                      else if (!isValidEmail(
-                          signUpController.emailController.text)) {
-                        print('Invalid email, showing snackbar');
-                        Get.back(); // Close the dialog
-                        Get.snackbar(
-                          'Alert',
-                          'Please enter a valid email',
-                          snackPosition: SnackPosition.TOP,
-                          backgroundColor: Colors.red,
-                          colorText: Colors.white,
-                        );
-                      }
 
-
-                      // If all checks pass, proceed with sign-up
-                      else {
-                        bool success = await signUpController.signUpPressed(
-                          name: signUpController.nameController.text.trim(),
+                      // On successful user creation, proceed to login
+                      if (success) {
+                        print('User created successfully, now logging in...');
+                        bool loginSuccess = await userLoginController.loginPressed(
                           email: signUpController.emailController.text.trim(),
-                          mobileNumber:
-                              signUpController.mobileNumberController.text.trim(),
-                        );
-                        if (kDebugMode) {
-                          print('Register success: $success');
-                        }
-                        if (success) {
-                          print('Successful registration, navigating');
-                          Get.back(); // Close the dialog
 
-                          Get.to(() => UserLoginScreen());
-                          handleLogin();
+                        );
+
+                        if (loginSuccess) {
+                          print('Login successful, navigating to dashboard...');
+                          Get.back(); // Close loading dialog
+                          Get.to(() => ExpandedBottomNavBar()); // Navigate to the next screen
                         } else {
-                          print('Registration failed, showing snackbar');
-                          Get.back(); // Close the dialog
+                          print('Login failed, showing snackbar');
+                          Get.back(); // Close loading dialog
                           Get.snackbar(
                             'Alert',
-                            'Registration Failed',
+                            'Login Failed',
                             snackPosition: SnackPosition.BOTTOM,
                             backgroundColor: Colors.red,
                           );
                         }
+                      } else {
+                        print('User creation failed, showing snackbar');
+                        Get.back(); // Close loading dialog
+                        Get.snackbar(
+                          'Alert',
+                          'Registration Failed',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.red,
+                        );
                       }
                     }
-                    ),
+                  },
+                ),
+
                 SizedBox(
                   height: 20.h,
                 ),
@@ -250,3 +275,7 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
     );
   }
 }
+
+
+
+

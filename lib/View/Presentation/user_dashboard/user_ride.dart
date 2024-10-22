@@ -284,11 +284,9 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
   }
 
 
-
-
   // Function to draw a route using the Google Directions API
   Future<void> _drawRoute(LatLng origin, LatLng destination) async {
-    final apiKey = 'AIzaSyD7hi_cOIPnZHqUShJ6bJNJyqWjGpOawBs';
+    final apiKey = 'AIzaSyBw9VKmwCrmGzw9GXTm2QwJIOl40ag_Ick';
     final url =
         'https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=$apiKey';
 
