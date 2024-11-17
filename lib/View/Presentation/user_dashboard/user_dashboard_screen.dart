@@ -1,8 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:kantipur_ride/View/Presentation/Rental/rental_onboarding.dart';
 import 'package:kantipur_ride/View/Presentation/user_dashboard/user_profile.dart';
-import 'package:kantipur_ride/View/Presentation/user_dashboard/user_ride.dart';
+import 'package:kantipur_ride/View/Presentation/user_dashboard/ride_sharing_screen.dart';
 import '../../../Components/map_example.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -58,7 +59,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
         setState(() {
-          currentAddress = "${place.name}, ${place.locality}, ${place.administrativeArea}";
+          currentAddress = "${place.subLocality}, ${place.locality}, ${place.administrativeArea}";
         });
       } else {
         setState(() {
@@ -133,8 +134,12 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                     onTap: (){
                       Navigator.of(context).push(MaterialPageRoute(builder: (context)=>RideSharingScreen()));
                     },
-                      child: ServiceOption(icon: Icons.motorcycle, label: 'Bike')),
-                  ServiceOption(icon: Icons.directions_car, label: 'Car'),
+                      child: ServiceOption(icon: Icons.motorcycle, label: 'Ride')),
+                  InkWell(
+                      onTap: (){
+                        Navigator.of(context).push(MaterialPageRoute(builder: (context)=>RentalOnboarding()));
+                      },
+                      child: ServiceOption(icon: Icons.directions_car, label: 'Rental')),
                   ServiceOption(icon: Icons.fastfood, label: 'Food'),
                   ServiceOption(icon: Icons.local_shipping, label: 'Parcel'),
                   ServiceOption(icon: Icons.shopping_basket, label: 'Bazaar'),

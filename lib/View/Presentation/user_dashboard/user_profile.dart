@@ -5,11 +5,22 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kantipur_ride/Components/dt_button.dart';
 import 'package:get/get.dart';
+import 'package:kantipur_ride/View/Presentation/onboarding/user_login_screen.dart';
 import 'package:kantipur_ride/View/Presentation/user_dashboard/ride_history.dart';
 
+import '../../../controller/shared_preferences.dart';
 
-class UserProfile extends StatelessWidget {
+
+class UserProfile extends StatefulWidget {
   const UserProfile({super.key});
+
+  @override
+  State<UserProfile> createState() => _UserProfileState();
+}
+
+class _UserProfileState extends State<UserProfile> {
+
+  final preferences = Get.put(PrefrencesManager());
 
   @override
   Widget build(BuildContext context) {
@@ -160,18 +171,26 @@ class UserProfile extends StatelessWidget {
             ),
           ),
           SizedBox(height: 10.h),
-          Row(
-            children: [
-              Image.asset('assets/logout.png', height: 30.h),
-              SizedBox(width: 10.w),
-              Text(
-                'Logout',
-                style: GoogleFonts.openSans(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w600,
+          InkWell(
+              onTap: ()async{
+                await preferences.clearAuthToken();
+                await preferences.clearuserId();
+
+                Get.offAll(() => UserLoginScreen());
+              },
+            child: Row(
+              children: [
+                Image.asset('assets/logout.png', height: 30.h),
+                SizedBox(width: 10.w),
+                Text(
+                  'Logout',
+                  style: GoogleFonts.openSans(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

@@ -6,35 +6,38 @@ import 'package:http/http.dart' as http;
 class LoginAuth {
   final prefrencesController = Get.put(PrefrencesManager());
   String? token;
+  String? userId; // Add a userId variable to store the userId from the response
 
   Future<bool> login({
     required String email,
   }) async {
-    final Map<String, dynamic> requestbody = {
+    final Map<String, dynamic> requestBody = {
       'email': email,
     };
-    print("Requested dto=${requestbody.toString()}");
+    print("Requested dto=${requestBody.toString()}");
     try {
       final response = await http.post(
         Uri.parse('https://kantipur-rides-backend.onrender.com/api/v1/user/loginUser'),
         headers: {
           'Content-Type': 'application/json',
         },
-        body: json.encode(requestbody),
+        body: json.encode(requestBody),
       );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         final bool success = responseData['success'] ?? false;
 
-        // Fetch token from response and store it
         if (success) {
-          final String token = responseData['data']['token']; // Adjust based on your API structure
-          print('Login successful, token = $token');
+          // Fetch token and userId from response and store them
+          token = responseData['data']['token']; // Adjust based on your API structure
+          userId = responseData['data']['userId']; // Assuming 'userId' is in the response
+          print('Login successful, token = $token, userId = $userId');
 
-          // Store the token using SharedPreferences
-          await prefrencesController.saveAuthToken(token);
-          print('Token saved successfully!');
+          // Store the token and userId in SharedPreferences
+          await prefrencesController.saveAuthToken(token!);
+          await prefrencesController.saveuserId(userId!);
+          print('Token and userId saved successfully!');
 
           return true;
         } else {

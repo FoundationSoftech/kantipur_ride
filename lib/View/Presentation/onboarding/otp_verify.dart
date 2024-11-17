@@ -6,9 +6,12 @@ import 'package:dio/dio.dart' as dio;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../Components/dt_button.dart';
 import '../../../Components/expanded_bottom_nav_bar.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter/cupertino.dart';
 
 class OTPScreen extends StatefulWidget {
-  final String email; // Add a variable to hold the email
+  final String email;
 
   OTPScreen({Key? key, required this.email}) : super(key: key);
 
@@ -31,69 +34,182 @@ class _OTPScreenState extends State<OTPScreen> {
   final FocusNode _focusNode5 = FocusNode();
   final FocusNode _focusNode6 = FocusNode();
 
-  // Instantiate PreferencesManager
-  final PrefrencesManager prefrencesManager = Get.put(PrefrencesManager());
+  final PrefrencesManager preferencesManager = Get.put(PrefrencesManager());
+  late IO.Socket socket;
 
+  @override
+  void initState() {
+    super.initState();
+    _initializeSocket();
+  }
+
+  // Initialize socket connection
+  void _initializeSocket() {
+    socket = IO.io(
+      'https://kantipur-rides-backend.onrender.com',
+      IO.OptionBuilder().setTransports(['websocket']).build(),
+    );
+
+    socket.onConnect((_) {
+      print('Connected to the socket server. Socket ID: ${socket.id}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Connected to the server')),
+        );
+      }
+    });
+
+    socket.onDisconnect((_) {
+      print('Disconnected from the socket server');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Disconnected from the server')),
+        );
+      }
+    });
+
+    socket.onError((error) {
+      print('Socket error: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Socket error: $error')),
+        );
+      }
+    });
+
+    socket.connect();
+  }
+
+
+  // Emit the passenger's location
+  Future<void> _emitPassengerLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Location permission denied. Enable permissions to proceed.')),
+        );
+        return;
+      }
+    }
+
+    try {
+      // Fetch location
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      String? passengerId = await preferencesManager.getuserId();
+
+      // Log the fetched location for debugging
+      print("Fetched Location: Latitude = ${position.latitude}, Longitude = ${position.longitude}");
+
+      // Log the passengerId for debugging
+      print("Passenger ID: $passengerId");
+
+      // Check if socket is connected and log socketId
+      if (socket.connected) {
+        print("Socket Connected: Socket ID = ${socket.id}");
+
+        socket.emit("update-passenger-location", {
+          "userId": passengerId,
+          "currentLatitude": position.latitude,
+          "currentLongitude": position.longitude,
+          "socketId": socket.id, // Emitting socket ID
+        });
+
+        print("Location and socketId emitted: (${position.latitude}, ${position.longitude}), passengerId: $passengerId, socketId: ${socket.id}");
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Location sent to server')),
+        );
+      } else {
+        print("Socket not connected. Cannot emit location.");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send location. Verify passengerId and socket connection.')),
+        );
+      }
+    } catch (e) {
+      print("Error fetching location: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to retrieve location.')),
+      );
+    }
+  }
+
+  // Submit OTP and handle login
   void _submitOTP() async {
-    String otp = _controller1.text +
-        _controller2.text +
-        _controller3.text +
-        _controller4.text +
-        _controller5.text +
-        _controller6.text;
+    String otp = _controller1.text + _controller2.text + _controller3.text + _controller4.text + _controller5.text + _controller6.text;
 
     if (otp.length == 6) {
+      print('Submitting OTP: $otp');
+
       try {
         dio.Response response = await dio.Dio().post(
           'https://kantipur-rides-backend.onrender.com/api/v1/user/verifyCode',
           data: {'code': otp},
         );
 
-        print("OTP Verification Response: ${response.data}"); // Print the entire response
+        print('OTP Verification Response: ${response.data}');
 
         if (response.data['success']) {
           bool isUserExist = response.data['data']['isUserExist'];
-          print("isUserExist: $isUserExist"); // Check if user exists
 
           if (isUserExist) {
-            print("User exists, proceeding to login..."); // Indicate we're about to log in
-
-            // Use the email passed from UserLoginScreen
-            print("Email retrieved for login: ${widget.email}"); // Print the retrieved email
-
             dio.Response loginResponse = await dio.Dio().post(
               'https://kantipur-rides-backend.onrender.com/api/v1/user/loginUser',
-              data: {
-                'email': widget.email, // Use the passed email here
-                // You may need to include additional data like password, if required
-              },
+              data: {'email': widget.email},
             );
 
-            print("Login Response: ${loginResponse.data}"); // Print the login response
+            print('Full login response: ${loginResponse.data}');
 
-            if (loginResponse.data['success']) {
-              String token = loginResponse.data['data']['token'];
-              print("Login successful, token: $token"); // Log the token
-              await prefrencesManager.saveAuthToken(token); // Save the token
+            if (loginResponse.data != null && loginResponse.data['success'] == true) {
+              String? token = loginResponse.data['data']['token'];
+              String? userId = loginResponse.data['data']['userData']['userId'];
 
-              // Navigate to the dashboard
-              Get.off(() => ExpandedBottomNavBar(), transition: Transition.rightToLeft);
+              print('Token from response: $token');
+              print('UserId from response: $userId');
+
+              if (token != null && userId != null) {
+                await preferencesManager.saveAuthToken(token);
+                await preferencesManager.saveuserId(userId);
+
+                // Emit passenger location after successful login
+                await _emitPassengerLocation();
+
+                // Navigate to the next screen
+                Get.back();
+                Get.off(() => ExpandedBottomNavBar(), transition: Transition.rightToLeft);
+              } else {
+                print('Error: token or userId is null. Cannot proceed.');
+                Get.back();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Login failed: token or userId is null. Please try again.')),
+                );
+              }
             } else {
-              print("Login failed: ${loginResponse.data}"); // Print failure response
-            Get.to(()=>UserRegisterScreen(email: widget.email,));
+              print('Login failed: ${loginResponse.data['message']}');
+              Get.back();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Login failed: ${loginResponse.data['message']}')),
+              );
             }
           } else {
-            print("User does not exist."); // Print that user doesn't exist
-            Get.to(()=>UserRegisterScreen(email: widget.email,));
+            print('User does not exist, redirecting to registration.');
+            Get.back();
+            Get.to(() => UserRegisterScreen(email: widget.email));
           }
         } else {
+          print('Invalid OTP entered');
+          Get.back();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Invalid OTP. Please try again.')),
           );
         }
       } on dio.DioException catch (e) {
+        print('Error during OTP submission: ${e.response?.data ?? e.message}');
+        Get.back();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.message}')),
+          SnackBar(content: Text('Error: ${e.response?.data ?? e.message}')),
         );
       }
     } else {
@@ -103,13 +219,12 @@ class _OTPScreenState extends State<OTPScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Verify OTP')),
       body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 30.h),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
         child: Column(
           children: [
             Row(
@@ -123,12 +238,15 @@ class _OTPScreenState extends State<OTPScreen> {
                 _buildOTPField(_controller6, _focusNode6, null),
               ],
             ),
-            SizedBox(height: 30.h),
+            SizedBox(height: 30),
             CustomButton(
               text: 'Submit',
               bottonColor: Colors.blue,
               textColor: Colors.white,
-              onPressed: _submitOTP,
+              onPressed: () {
+                Get.dialog(Center(child: CircularProgressIndicator()));
+                _submitOTP();
+              },
             ),
           ],
         ),
@@ -138,14 +256,12 @@ class _OTPScreenState extends State<OTPScreen> {
 
   Widget _buildOTPField(TextEditingController controller, FocusNode focusNode, FocusNode? nextFocusNode) {
     return Container(
-      width: 40.w,
-      height: 60.h,
+      width: 40,
+      height: 60,
       child: TextField(
         controller: controller,
         focusNode: focusNode,
-        decoration: InputDecoration(
-          border: OutlineInputBorder(),
-        ),
+        decoration: InputDecoration(border: OutlineInputBorder()),
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
         onChanged: (value) {
@@ -158,6 +274,11 @@ class _OTPScreenState extends State<OTPScreen> {
       ),
     );
   }
-}
 
+  @override
+  void dispose() {
+    socket.disconnect();
+    super.dispose();
+  }
+}
 

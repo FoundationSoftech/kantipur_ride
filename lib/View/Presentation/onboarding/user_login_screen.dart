@@ -27,6 +27,10 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
 
   void sendOTP() async {
     if (userLoginController.emailController.text.trim().isEmpty) {
+      Get.dialog(
+        Center(child: CircularProgressIndicator()),
+
+      );
       Get.snackbar(
         'Error',
         'Email cannot be empty',
@@ -51,6 +55,10 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
     // Proceed to send OTP
     bool success = await userLoginController.sendVerificationCode(email: userLoginController.emailController.text.trim());
     if (success) {
+      Get.dialog(
+        Center(child: CircularProgressIndicator()),
+
+      );
       Get.snackbar(
         'Success',
         'Verification code sent to your email',
@@ -111,7 +119,13 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
                   text: 'Sign In',
                   bottonColor: AppColors.greenColor,
                   textColor: Colors.white,
-                  onPressed: sendOTP,
+                  onPressed: (){
+                    Get.dialog(
+                      Center(child: CircularProgressIndicator()),
+
+                    );
+                    sendOTP();
+                  },
                 ),
                 SizedBox(height: 50.h),
               ],

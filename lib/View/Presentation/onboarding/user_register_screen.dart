@@ -217,6 +217,10 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
 
                       // On successful user creation, proceed to login
                       if (success) {
+                        Get.dialog(
+                          Center(child: CircularProgressIndicator()),
+
+                        );
                         print('User created successfully, now logging in...');
                         bool loginSuccess = await userLoginController.loginPressed(
                           email: signUpController.emailController.text.trim(),
@@ -224,6 +228,10 @@ class _UserRegisterScreenState extends State<UserRegisterScreen> {
                         );
 
                         if (loginSuccess) {
+                          Get.dialog(
+                            Center(child: CircularProgressIndicator()),
+
+                          );
                           print('Login successful, navigating to dashboard...');
                           Get.back(); // Close loading dialog
                           Get.to(() => ExpandedBottomNavBar()); // Navigate to the next screen

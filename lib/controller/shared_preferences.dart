@@ -24,11 +24,6 @@ class PrefrencesManager extends GetxController {
     await prefs.remove('auth_token');
   }
 
-  Future<void> saveuserId(int? id) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setInt('userId', id ?? 0);
-    userId.value = id ?? 0;
-  }
 
   Future<String?> getAuthToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -37,12 +32,17 @@ class PrefrencesManager extends GetxController {
     return token;
   }
 
-  Future<int> getuserId() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int storedUserId = prefs.getInt('userId') ?? 0;
-    userId.value = storedUserId; // Update userId observable
-    return storedUserId;
+
+  Future<void> saveuserId(String userId) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('userId', userId);
   }
+
+  Future<String?> getuserId() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('userId');
+  }
+
 
   Future<void> clearuserId() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();

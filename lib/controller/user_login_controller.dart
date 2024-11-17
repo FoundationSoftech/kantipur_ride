@@ -7,12 +7,12 @@ import 'package:get/get.dart';
 
 
 class UserLoginController extends GetxController {
-
   final loginAuth = LoginAuth();
   final TextEditingController emailController = TextEditingController();
 
   final RxBool isObscure = RxBool(true);
 
+  // Fixed spelling for PreferencesManager and initialized with null safety
   final PrefrencesManager preferences = Get.put(PrefrencesManager());
 
   @override
@@ -46,12 +46,12 @@ class UserLoginController extends GetxController {
         }
       } else {
         // Server error
-        print('Error: ${response.statusCode}');
+        print('Server Error: ${response.statusCode}');
         return false;
       }
     } catch (e) {
       // Handle any errors
-      print('Exception: $e');
+      print('Exception while sending verification code: $e');
       return false;
     }
   }
@@ -59,14 +59,35 @@ class UserLoginController extends GetxController {
   Future<bool> loginPressed({
     required String email,
   }) async {
-    // Check if any of the required parameters are null
-    if (
-    email.isEmpty) {
-      // Handle the case where any of the parameters are null
+    if (email.isEmpty) {
+      print('Error: Email is empty');
       return false;
     }
-    return await loginAuth.login(
-      email: email,
-    );
+
+    try {
+      // Attempt login
+      final bool isLoggedIn = await loginAuth.login(email: email);
+
+      if (isLoggedIn) {
+        // Null safety check for userId
+        String? userId = loginAuth.userId;
+
+        if (userId != null && userId.isNotEmpty) {
+          // Store `userId` in SharedPreferences
+          await preferences.saveuserId(userId);
+          print('User ID stored successfully');
+        } else {
+          print('Error: userId is null or empty');
+        }
+      } else {
+        print('Login failed');
+      }
+
+      return isLoggedIn;
+    } catch (e) {
+      // Catch any exceptions and log the error
+      print('Exception during login: $e');
+      return false;
+    }
   }
 }
