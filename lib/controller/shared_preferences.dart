@@ -8,6 +8,19 @@ class PrefrencesManager extends GetxController {
   RxString email = ''.obs;
   RxString username = ''.obs;
 
+  Future<void> saveCurrentLocation({
+    required double latitude,
+    required double longitude,
+    required String socketId,
+  }) async {
+    // Save current location logic
+  }
+
+  Future<Map<String, dynamic>> getCurrentLocation() async {
+    // Get current location logic
+    return {"latitude": null, "longitude": null, "socketId": null};
+  }
+
   Future<void> saveToken(String? token) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString('authToken', token ?? '');

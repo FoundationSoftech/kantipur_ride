@@ -8,7 +8,6 @@ import 'package:get/get.dart';
 import '../../../Components/dt_button.dart';
 import 'otp_verify.dart';
 
-
 class UserLoginScreen extends StatefulWidget {
   const UserLoginScreen({Key? key}) : super(key: key);
 
@@ -94,7 +93,7 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
                   children: [
                     Image.asset('assets/logo.png', width: 200.w, color: Colors.red),
                     Text(
-                      'kantipurRIde',
+                      'kantipurRide',
                       style: GoogleFonts.lato(
                         fontSize: 22.sp,
                         fontWeight: FontWeight.w800,
