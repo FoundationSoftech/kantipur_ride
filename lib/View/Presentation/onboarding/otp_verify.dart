@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kantipur_ride/View/Presentation/onboarding/user_register_screen.dart';
@@ -37,11 +39,13 @@ class _OTPScreenState extends State<OTPScreen> {
 
   final PrefrencesManager preferencesManager = Get.put(PrefrencesManager());
   late IO.Socket socket;
+  StreamSubscription<Position>? positionStream;
 
   @override
   void initState() {
     super.initState();
     _initializeSocket();
+    _emitPassengerLocation();
   }
 
   @override
@@ -71,11 +75,7 @@ class _OTPScreenState extends State<OTPScreen> {
 
     socket.onConnect((_) {
       print('Connected to the socket server. Socket ID: ${socket.id}');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Connected to the server')),
-        );
-      }
+      _emitPassengerLocation();
     });
 
     socket.onDisconnect((_) {
@@ -84,15 +84,6 @@ class _OTPScreenState extends State<OTPScreen> {
 
     socket.onError((error) {
       print('Socket error: $error');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Socket error: $error')),
-        );
-      }
-    });
-
-    socket.on("location-updated", (data) {
-      print("Server acknowledged location update: $data");
     });
 
     socket.connect();
@@ -100,6 +91,7 @@ class _OTPScreenState extends State<OTPScreen> {
 
   // Emit the passenger's location
   Future<void> _emitPassengerLocation() async {
+    // Step 1: Check and request location permission
     LocationPermission permission = await Geolocator.checkPermission();
 
     if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
@@ -113,43 +105,59 @@ class _OTPScreenState extends State<OTPScreen> {
     }
 
     try {
+      // Step 2: Get current location
       Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      double latitude = position.latitude;
+      double longitude = position.longitude;
+
+      // Step 3: Get user ID (or any other necessary data)
       String? passengerId = await preferencesManager.getuserId();
 
-      print("Fetched Location: Latitude = ${position.latitude}, Longitude = ${position.longitude}");
-      print("Passenger ID: $passengerId");
-
+      // Step 4: Ensure socket is connected before emitting location
       if (socket.connected) {
-        String socketId = socket.id ?? "";
-        socket.emit("update-passenger-location", {
-          "userId": passengerId,
-          "currentLatitude": position.latitude,
-          "currentLongitude": position.longitude,
-          "socketId": socketId,
+        print('Socket connected, emitting location...');
+
+        // Step 5: Emit the location to the server
+        socket.emitWithAck("update-passenger-location", {
+          "passengerId": passengerId,
+          "currentLatitude": latitude,
+          "currentLongitude": longitude,
+          "socketId": socket.id, // Ensure socketId is included
+        }, ack: (response) {
+          print("Acknowledgment from server: $response");
+          if (response != null && response['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Location updated successfully')),
+            );
+          } else {
+            print("Error updating location: ${response["message"] ?? "Unknown error"}");
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to update location: ${response["message"] ?? "Unknown error"}')),
+            );
+          }
         });
 
-        print("Location and socketId emitted: (${position.latitude}, ${position.longitude}), passengerId: $passengerId, socketId: ${socket.id}");
-
-        // Save data locally
+        // Step 6: Save the current location to preferences
         preferencesManager.saveCurrentLocation(
-          latitude: position.latitude,
-          longitude: position.longitude,
-          socketId: socketId,
+          latitude: latitude,
+          longitude: longitude,
+          socketId: socket.id!, // Save the socket ID as well
         );
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Location sent to server')),
         );
       } else {
-        print("Socket not connected. Cannot emit location.");
+        print("Socket not connected. Retrying...");
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send location. Verify passengerId and socket connection.')),
+          SnackBar(content: Text('Socket not connected. Cannot emit location. Retrying...')),
         );
       }
     } catch (e) {
+      // Step 7: Handle errors
       print("Error fetching location: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to retrieve location.')),
+        SnackBar(content: Text('Unable to retrieve location. Please try again.')),
       );
     }
   }
@@ -180,6 +188,7 @@ class _OTPScreenState extends State<OTPScreen> {
 
             print('Full login response: ${loginResponse.data}');
 
+            // Inside _submitOTP() after successful login
             if (loginResponse.data != null && loginResponse.data['success'] == true) {
               String? token = loginResponse.data['data']['token'];
               String? userId = loginResponse.data['data']['userData']['userId'];
@@ -198,7 +207,8 @@ class _OTPScreenState extends State<OTPScreen> {
                   SnackBar(content: Text('Login failed: token or userId is null. Please try again.')),
                 );
               }
-            } else {
+            }
+            else {
               print('Login failed: ${loginResponse.data['message']}');
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Login failed: ${loginResponse.data['message']}')),
@@ -247,7 +257,7 @@ class _OTPScreenState extends State<OTPScreen> {
             SizedBox(height: 30),
             CustomButton(
               text: 'Submit',
-             bottonColor: Colors.blue,
+              bottonColor: Colors.blue,
               textColor: Colors.white,
               onPressed: () {
                 Get.dialog(Center(child: CircularProgressIndicator()));
@@ -279,5 +289,6 @@ class _OTPScreenState extends State<OTPScreen> {
     );
   }
 }
+
 
 

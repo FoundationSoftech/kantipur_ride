@@ -4,11 +4,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:kantipur_ride/controller/shared_preferences.dart';
 import '../Modal/login_auth.dart';
 import 'package:get/get.dart';
-
+import '../Modal/user_login_modal.dart';
 
 class UserLoginController extends GetxController {
   final loginAuth = LoginAuth();
   final TextEditingController emailController = TextEditingController();
+
+  Rx<UserLoginModal> loginResponse = Rx<UserLoginModal>(UserLoginModal());
 
   final RxBool isObscure = RxBool(true);
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:kantipur_ride/controller/ride_request_controller.dart';
+import 'package:kantipur_ride/services/web_socket_services.dart';
 import 'package:kantipur_ride/utils/dt_colors.dart';
 import 'package:get/get.dart';
 
@@ -15,6 +16,8 @@ class RiderRequestUser extends StatefulWidget {
 
 class _RiderRequestUserState extends State<RiderRequestUser> {
   final RideRequestController rideRequestController = RideRequestController();
+
+  UserWebSocketService webSocketService = UserWebSocketService();
 
   @override
   Widget build(BuildContext context) {
@@ -140,32 +143,33 @@ class _RiderRequestUserState extends State<RiderRequestUser> {
                     ],
                   ),
                   SizedBox(height: 16.h),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.dialog(const Center(
-                          child: CircularProgressIndicator(),
-                        ));
-                        rideRequestController.rideCancelled();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20.r),
-                        ),
-                        padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 32.w),
-                      ),
-                      child: Text(
-                        'Cancel Ride',
-                        style: GoogleFonts.roboto(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
+              Center(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Get.dialog(const Center(child: CircularProgressIndicator()));
+
+                    // Avoid re-registering listeners every time the button is pressed
+                    rideRequestController.rideCancelled();  // Only trigger the ride cancel logic
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 32.w),
+                  ),
+                  child: Text(
+                    'Cancel Ride',
+                    style: GoogleFonts.roboto(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
-                ],
+                ),
+              ),
+
+              ],
               ),
             ),
           ),

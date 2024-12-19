@@ -5,19 +5,24 @@ import 'package:device_preview/device_preview.dart';
 import 'package:get/get.dart';
 import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:kantipur_ride/Components/expanded_bottom_nav_bar.dart';
+import 'package:kantipur_ride/controller/ride_sharing_controller.dart';
 import 'View/Presentation/onboarding/user_login_screen.dart';
 import 'controller/option_controller.dart';
 import 'controller/shared_preferences.dart';
 
 
-void main() {
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  Get.put(RideSharingController());
+  await PrefrencesManager.init();
+  Get.put(OptionController()); // Inject OptionController
+
   runApp(
     DevicePreview(
       enabled: !kReleaseMode,
       builder: (context) => const MyApp(),
     ),
   );
-  Get.put(OptionController());
 }
 
 class MyApp extends StatelessWidget {

@@ -8,13 +8,13 @@ class PrefrencesManager extends GetxController {
   RxString email = ''.obs;
   RxString username = ''.obs;
 
-  Future<void> saveCurrentLocation({
-    required double latitude,
-    required double longitude,
-    required String socketId,
-  }) async {
-    // Save current location logic
+  static SharedPreferences? _prefs;
+
+
+  static Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
   }
+
 
   Future<Map<String, dynamic>> getCurrentLocation() async {
     // Get current location logic
@@ -45,10 +45,45 @@ class PrefrencesManager extends GetxController {
     return token;
   }
 
+  Future<void> saveCurrentLocation({
+    required double latitude,
+    required double longitude,
+    required String socketId,
+  }) async {
+    // Use SharedPreferences or other storage methods to persist data
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('currentLatitude', latitude);
+    await prefs.setDouble('currentLongitude', longitude);
+    await prefs.setString('socketId', socketId);
+  }
+
+
+  Future<double?> getCurrentLatitude() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble('currentLatitude');
+  }
+
+  Future<double?> getCurrentLongitude() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble('currentLongitude');
+  }
+
+  Future<String?> getSocketId() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('socketId');
+  }
+
+
 
   Future<void> saveuserId(String userId) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('userId', userId);
+  }
+
+  // Method to save user email
+  Future<void> saveUserEmail(String userEmail) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('userEmail', userEmail);
   }
 
   Future<String?> getuserId() async {

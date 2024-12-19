@@ -10,9 +10,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:kantipur_ride/Components/dt_button.dart';
 import 'package:kantipur_ride/controller/ride_sharing_controller.dart';
+import 'package:kantipur_ride/services/web_socket_services.dart';
 import 'package:kantipur_ride/utils/dt_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 
 class RideSharingScreen extends StatefulWidget {
   @override
@@ -22,6 +22,7 @@ class RideSharingScreen extends StatefulWidget {
 class _RideSharingScreenState extends State<RideSharingScreen> {
 
   final RideSharingController rideSharingController = Get.put(RideSharingController());
+  UserWebSocketService webSocketService = UserWebSocketService();
 
 
   GoogleMapController? mapController;
@@ -51,13 +52,113 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
   void dispose() {
     destinationTextController.dispose();
     Get.delete<RideSharingController>();
+    webSocketService.disconnect(); // Ensure to disconnect when disposing
     // TODO: implement dispose
     super.dispose();
   }
 
   void _initialize() async {
     await _getCurrentLocation();
+    // _setupWebSocketListeners();
   }
+
+  // void _setupWebSocketListeners() {
+  //   webSocketService.on('ride-accepted', (data) {
+  //     print("Ride Accepted: $data");
+  //     rideSharingController.currentRideId.value = data['rideId'];
+  //     Get.snackbar("Ride Accepted", "Your ride has been accepted by the driver.");
+  //   });
+  //
+  //   webSocketService.on('ride-canceled', (data) {
+  //     print("Ride Canceled: $data");
+  //     rideSharingController.currentRideId.value = null;  // Safe assignment now
+  //     Get.snackbar("Ride Canceled", "Your ride has been canceled.");
+  //   });
+  //
+  //   webSocketService.on('ride-started', (data) {
+  //     print("Ride Started: $data");
+  //     rideSharingController.currentRideStatus.value = "In Progress";
+  //     Get.snackbar("Ride Started", "Your ride is now in progress.");
+  //   });
+  //
+  //   webSocketService.on('ride-completed', (data) {
+  //     print("Ride Completed: $data");
+  //     rideSharingController.currentRideStatus.value = "Completed";
+  //     rideSharingController.currentRideId.value = null;  // Safe assignment
+  //     Get.snackbar("Ride Completed", "Your ride has been completed successfully.");
+  //   });
+  // }
+
+
+  void _triggerRideRequest() {
+   try{
+     final data = {
+       "rideId": "ride-${DateTime.now().millisecondsSinceEpoch}",
+       // "passengerId": rideSharingController.passengerId,
+       "pickupLatitude": rideSharingController.pickupPlaceController.text,
+       "pickupLongitude": rideSharingController.pickupPlaceController.text,
+       "destinationLatitude": rideSharingController.destinationLocation.value?.latitude,
+       "destinationLongitude": rideSharingController.destinationLocation.value?.longitude,
+       "rideType": "bike",
+       // "socketId": webSocketService.socket,
+     };
+
+     print("Triggering ride request with data: $data");
+     webSocketService.emit("ride-request", data);
+
+     Get.snackbar("Ride Request Sent", "Your ride request has been sent.",
+         snackPosition: SnackPosition.BOTTOM);
+   }catch(e){
+     print("====On ride request event error ${e.toString()}");
+    }
+  }
+
+
+  void _triggerRideCancel() {
+    final data = {
+      "rideId": rideSharingController.currentRideId.value,
+      "passengerId": rideSharingController.passengerId.value,
+      "socketId": webSocketService.socket,
+    };
+
+    webSocketService.emit("ride-cancel", data);
+  }
+
+  void _triggerAcceptRide() {
+    final data = {
+      "rideId": rideSharingController.currentRideId.value,
+      "driverId": rideSharingController.driverId.value,
+      "latitude": 27.7172, // Replace with real location
+      "longitude": 85.3240, // Replace with real location
+      "socketId": webSocketService.socket,
+    };
+
+    webSocketService.emit("accept-ride", data);
+  }
+
+  void _triggerRidePickup() {
+    final data = {
+      "rideId": rideSharingController.currentRideId.value,
+      "driverId": rideSharingController.driverId.value,
+      "passengerId": rideSharingController.passengerId.value,
+      "pickupTime": DateTime.now().toIso8601String(),
+    };
+
+    webSocketService.emit("ride-pickup", data);
+  }
+
+  void _triggerRideComplete(double fare) {
+    final data = {
+      "rideId": rideSharingController.currentRideId.value,
+      "driverId": rideSharingController.driverId.value,
+      "passengerId": rideSharingController.passengerId.value,
+      "fare": fare,
+      "completionTime": DateTime.now().toIso8601String(),
+    };
+
+    webSocketService.emit("ride-completed", data);
+  }
+
 
   Future<void> _getCurrentLocation() async {
     try {
@@ -129,8 +230,6 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
     }
   }
 
-
-
   Marker _createMarker(LatLng position, String id, double hue) {
     return Marker(
       markerId: MarkerId(id),
@@ -165,7 +264,7 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
       }
     }
 
-     catch (e) {
+    catch (e) {
       print("Error fetching address: $e");
     }
   }
@@ -337,9 +436,9 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
             child: GooglePlaceAutoCompleteTextField(
               textEditingController: rideSharingController.pickupPlaceController,
               boxDecoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide.none,
-                )
+                  border: Border(
+                    top: BorderSide.none,
+                  )
               ),
               googleAPIKey: apiKey,
               debounceTime: 800,
@@ -410,11 +509,12 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
           Get.snackbar("Error", "Please fill in all ride details.",
               snackPosition: SnackPosition.BOTTOM);
         } else {
+          _triggerRideRequest();
           rideSharingController.createRide();  // Proceed with creating the ride
         }
       },
       text: "Search Ride",
-     textColor: Colors.white,
+      textColor: Colors.white,
       width: double.infinity,
       bottonColor: AppColors.greenColor,
     );
