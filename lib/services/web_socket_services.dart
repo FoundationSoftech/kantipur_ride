@@ -168,11 +168,12 @@ class UserWebSocketService {
   }
 
   /// Emit passenger location update
-  void updatePassengerLocation(String passengerId, double latitude, double longitude) {
+  void updatePassengerLocation(String passengerId, double latitude, double longitude,String socketId) {
     emit("update-passenger-location", {
       "passengerId": passengerId,
       "latitude": latitude,
       "longitude": longitude,
+      "socketId":socketId,
     });
   }
 
