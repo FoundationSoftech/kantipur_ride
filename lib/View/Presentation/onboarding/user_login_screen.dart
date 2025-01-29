@@ -22,9 +22,8 @@ class UserLoginScreen extends StatefulWidget {
 }
 
 class _UserLoginScreenState extends State<UserLoginScreen> {
-  final UserLoginController userLoginController = Get.put(UserLoginController());
-  final PrefrencesManager preferencesManager = Get.put(PrefrencesManager());
-  late IO.Socket socket;
+  final UserLoginController userLoginController = Get.find();  // Use Get.find() for singleton instance
+  final PrefrencesManager preferencesManager = Get.find();  // Use Get.find() for singleton instance
 
   bool isValidEmail(String email) {
     String pattern = r'^.+@.+\..+$';
@@ -32,107 +31,10 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
     return regex.hasMatch(email);
   }
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   _initializeSocket();
-  // }
-
-  // Future<void> _emitPassengerLocation() async {
-  //   // Ensure the user has a valid userId from preferences
-  //   String? passengerId = await preferencesManager.getuserId();
-  //
-  //   if (passengerId == null) {
-  //     print("User ID is null! Cannot emit location.");
-  //     return;
-  //   }
-  //
-  //   if (!socket.connected) {
-  //     print("Socket not connected. Retrying...");
-  //     await Future.delayed(Duration(seconds: 3));
-  //     _emitPassengerLocation(); // Retry until connected
-  //     return;
-  //   }
-  //
-  //   try {
-  //     // Request location permission
-  //     LocationPermission permission = await Geolocator.checkPermission();
-  //     if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-  //       permission = await Geolocator.requestPermission();
-  //       if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-  //         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Location permission denied.')));
-  //         return;
-  //       }
-  //     }
-  //
-  //     // Fetch current position (latitude and longitude)
-  //     Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-  //     double latitude = position.latitude;
-  //     double longitude = position.longitude;
-  //
-  //     // Print the fetched location
-  //     print('Socket connected, emitting location...');
-  //     socket.emitWithAck("update-passenger-location", {
-  //       "userId": passengerId,
-  //       "currentLatitude": latitude,
-  //       "currentLongitude": longitude,
-  //       "socketId": socket.id,  // Ensure that socket.id is passed
-  //     }, ack: (response) {
-  //       if (response != null && response['success'] == true) {
-  //         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Location updated successfully')));
-  //       } else {
-  //         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update location: ${response["message"] ?? "Unknown error"}')));
-  //       }
-  //     });
-  //
-  //     // Store current location and socketId in preferences for future use
-  //     preferencesManager.saveCurrentLocation(
-  //       latitude: latitude,
-  //       longitude: longitude,
-  //       socketId: socket.id!, // Ensure socket.id is available
-  //     );
-  //
-  //     // Confirm the location update
-  //     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Location sent to server')));
-  //   } catch (e) {
-  //     print("Error fetching location: $e");
-  //     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to retrieve location.')));
-  //   }
-  // }
-
-
-  // Initialize socket connection
-  // void _initializeSocket() {
-  //   socket = IO.io(
-  //     'https://kantipur-rides-backend.onrender.com',
-  //     IO.OptionBuilder().setTransports(['websocket']).build(),
-  //   );
-  //
-  //   socket.onConnect((_) {
-  //     print('Connected to the socket server. Socket ID: ${socket.id}');
-  //     _emitPassengerLocation(); // Emit location after socket connection is established
-  //   });
-  //
-  //   socket.onConnectError((error) {
-  //     print('Connection error: $error');
-  //   });
-  //
-  //   socket.onDisconnect((_) {
-  //     print('Disconnected from the socket server');
-  //   });
-  //
-  //   socket.onError((error) {
-  //     print('Socket error: $error');
-  //   });
-  //
-  //   socket.connect();
-  // }
-
   void sendOTP() async {
     if (userLoginController.emailController.text.trim().isEmpty) {
       Get.dialog(
         Center(child: CircularProgressIndicator()),
-
       );
       Get.snackbar(
         'Error',
@@ -160,7 +62,6 @@ class _UserLoginScreenState extends State<UserLoginScreen> {
     if (success) {
       Get.dialog(
         Center(child: CircularProgressIndicator()),
-
       );
       Get.snackbar(
         'Success',

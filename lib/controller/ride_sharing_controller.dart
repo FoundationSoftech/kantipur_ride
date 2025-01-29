@@ -13,7 +13,6 @@ import '../services/web_socket_services.dart';
 
 class RideSharingController extends GetxController {
   // Ride details
-
   var rideType = 'bike'.obs; // Default to 'bike'
   final String apiKey = 'AIzaSyBw9VKmwCrmGzw9GXTm2QwJIOl40ag_Ick';
   Rx<LatLng?> sourceLocation = Rx<LatLng?>(null);
@@ -24,25 +23,21 @@ class RideSharingController extends GetxController {
   RxString duration = ''.obs;
   RxString price = ''.obs;
   RxSet<Polyline> polylines = RxSet<Polyline>();
-  final UserWebSocketService webSocketService = UserWebSocketService();
+
+  final UserWebSocketService webSocketService = UserWebSocketService(); // Singleton instance
 
   RxString passengerId = ''.obs;
-
   RxString driverId = ''.obs;
-
 
   @override
   void onInit() {
-    // TODO: implement onInit
     super.onInit();
-    webSocketService
-        .initializeConnection("https://kantipur-rides-backend.onrender.com");
+    webSocketService.initializeConnection("https://kantipur-rides-backend.onrender.com");
     _registerWebSocketListeners();
   }
 
   @override
   void onClose() {
-    // TODO: implement onClose
     webSocketService.disconnect();
     super.onClose();
   }
@@ -57,16 +52,13 @@ class RideSharingController extends GetxController {
 
   Future<void> createRide() async {
     if (!isRideDataComplete()) {
-      Get.snackbar("Error", "Please fill in all ride details",
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar("Error", "Please fill in all ride details", snackPosition: SnackPosition.BOTTOM);
       return;
     }
 
     String? token = await PrefrencesManager().getAuthToken();
-
     if (token == null) {
-      Get.snackbar("Error", "User is not authenticated. Please login again.",
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar("Error", "User is not authenticated. Please login again.", snackPosition: SnackPosition.BOTTOM);
       return;
     }
 
@@ -97,19 +89,16 @@ class RideSharingController extends GetxController {
       print("API Response: ${response.body}");
 
       if (response.statusCode == 200) {
-
         final responseData = jsonDecode(response.body);
         if (responseData['success']) {
-          Get.snackbar("Success", "Ride Created Successfully",
-              snackPosition: SnackPosition.BOTTOM);
+          Get.snackbar("Success", "Ride Created Successfully", snackPosition: SnackPosition.BOTTOM);
           webSocketService.registerSocketListeners();
           Get.to(() => RiderRequestUser());
         } else {
           print("Failed to create ride: ${responseData['message']}");
         }
       } else if (response.statusCode == 401) {
-        Get.snackbar("Error", "Unauthorized. Please login again.",
-            snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar("Error", "Unauthorized. Please login again.", snackPosition: SnackPosition.BOTTOM);
       } else {
         print("Error: ${response.statusCode}");
       }
@@ -134,7 +123,6 @@ class RideSharingController extends GetxController {
         price.value.isNotEmpty &&
         destinationTextController.text.isNotEmpty &&
         pickupPlaceController.text.isNotEmpty;
-    // Ensure currentAddress is filled
   }
 
   // Function to update ride type
@@ -142,14 +130,12 @@ class RideSharingController extends GetxController {
     rideType.value = type;
   }
 
-  final TextEditingController destinationTextController =
-      TextEditingController();
+  final TextEditingController destinationTextController = TextEditingController();
   final TextEditingController pickupPlaceController = TextEditingController();
 
   Future<void> getCurrentLocation() async {
     try {
-      Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       sourceLocation.value = LatLng(position.latitude, position.longitude);
       await _getAddressFromLatLng(sourceLocation.value!);
     } catch (e) {
@@ -202,11 +188,8 @@ class RideSharingController extends GetxController {
         final data = jsonDecode(response.body);
         if (data['routes'] != null && data['routes'].isNotEmpty) {
           final route = data['routes'].first;
-          final polylinePoints = PolylinePoints()
-              .decodePolyline(route['overview_polyline']['points']);
-          final routePoints = polylinePoints
-              .map((point) => LatLng(point.latitude, point.longitude))
-              .toList();
+          final polylinePoints = PolylinePoints().decodePolyline(route['overview_polyline']['points']);
+          final routePoints = polylinePoints.map((point) => LatLng(point.latitude, point.longitude)).toList();
 
           polylines.add(Polyline(
             polylineId: PolylineId("route"),
@@ -217,8 +200,7 @@ class RideSharingController extends GetxController {
 
           distance.value = route['legs'][0]['distance']['text'];
           duration.value = route['legs'][0]['duration']['text'];
-          price.value = (route['legs'][0]['distance']['value'] / 1000 * 20)
-              .toStringAsFixed(2);
+          price.value = (route['legs'][0]['distance']['value'] / 1000 * 20).toStringAsFixed(2);
         }
       }
     } catch (e) {
@@ -236,3 +218,4 @@ class RideSharingController extends GetxController {
     });
   }
 }
+

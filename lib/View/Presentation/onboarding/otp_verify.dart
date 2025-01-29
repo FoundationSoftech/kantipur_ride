@@ -12,6 +12,8 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/cupertino.dart';
 
+import '../../../services/web_socket_services.dart';
+
 
 class OTPScreen extends StatefulWidget {
   final String email;
@@ -90,7 +92,7 @@ class _OTPScreenState extends State<OTPScreen> {
   }
 
   // Emit the passenger's location
-  Future<void> _emitPassengerLocation() async {
+  void _emitPassengerLocation() async {
     // Step 1: Check and request location permission
     LocationPermission permission = await Geolocator.checkPermission();
 
@@ -110,11 +112,12 @@ class _OTPScreenState extends State<OTPScreen> {
       double latitude = position.latitude;
       double longitude = position.longitude;
 
-      // Step 3: Get user ID (or any other necessary data)
+      // Step 3: Get user ID
       String? passengerId = await preferencesManager.getuserId();
 
       // Step 4: Ensure socket is connected before emitting location
-      if (socket.connected) {
+      String? socketId = UserWebSocketService().getSocketId();  // Use the singleton to get socketId
+      if (socketId != null && socketId.isNotEmpty) {
         print('Socket connected, emitting location...');
 
         // Step 5: Emit the location to the server
@@ -122,7 +125,7 @@ class _OTPScreenState extends State<OTPScreen> {
           "passengerId": passengerId,
           "currentLatitude": latitude,
           "currentLongitude": longitude,
-          "socketId": socket.id, // Ensure socketId is included
+          "socketId": socketId,  // Use the stored socketId
         }, ack: (response) {
           print("Acknowledgment from server: $response");
           if (response != null && response['success'] == true) {
@@ -141,7 +144,7 @@ class _OTPScreenState extends State<OTPScreen> {
         preferencesManager.saveCurrentLocation(
           latitude: latitude,
           longitude: longitude,
-          socketId: socket.id!, // Save the socket ID as well
+          socketId: socketId, // Save the socket ID as well
         );
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,13 +157,13 @@ class _OTPScreenState extends State<OTPScreen> {
         );
       }
     } catch (e) {
-      // Step 7: Handle errors
       print("Error fetching location: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Unable to retrieve location. Please try again.')),
       );
     }
   }
+
 
   // Submit OTP and handle login
   void _submitOTP() async {
@@ -198,7 +201,7 @@ class _OTPScreenState extends State<OTPScreen> {
                 await preferencesManager.saveuserId(userId);
 
                 // Emit passenger location after successful login
-                await _emitPassengerLocation();
+               _emitPassengerLocation();
 
                 Get.off(() => ExpandedBottomNavBar(), transition: Transition.rightToLeft);
               } else {

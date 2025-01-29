@@ -133,87 +133,65 @@ import 'package:get/get.dart';
 // }
 
 
+
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:get/get.dart';
+
 class UserWebSocketService {
+  static final UserWebSocketService _instance = UserWebSocketService._internal();
+
+  factory UserWebSocketService() {
+    return _instance;
+  }
+
   IO.Socket? socket;
+  bool _isConnected = false;
+
+  // socketId will be stored here
+  String? socketId;
+
+  UserWebSocketService._internal();
 
   /// Initialize and connect to the server
   void initializeConnection(String serverUrl) {
+    if (socket != null && socket!.connected) {
+      print("Socket already connected");
+      return; // Prevent multiple connections
+    }
+
     socket = IO.io(
       serverUrl,
       IO.OptionBuilder()
-          .setTransports(['websocket']) // Ensure WebSocket transport
-          .enableAutoConnect() // Automatically connect
+          .setTransports(['websocket'])
+          .enableAutoConnect()
           .build(),
     );
 
     // Register connection event handlers
     socket?.onConnect((_) {
-      print("Connected to WebSocket Server");
+      print("Connected to WebSocket Server with ID: ${socket?.id}");
+      socketId = socket?.id; // Set socketId when connected
       Get.snackbar("Connection Status", "Connected to the server");
+      _isConnected = true;
     });
 
     socket?.onDisconnect((_) {
       print("Disconnected from WebSocket Server");
       Get.snackbar("Connection Status", "Disconnected from the server");
+      _isConnected = false;
+      socketId = null; // Reset socketId on disconnect
     });
 
-    // Register custom event listeners
-    registerSocketListeners();
+    // Only register listeners once
+    if (!_isConnected) {
+      registerSocketListeners();
+    }
   }
 
   /// Emit events to the server
   void emit(String event, dynamic data) {
     socket?.emit(event, data);
     print("Emitted event: $event with data: $data");
-  }
-
-  /// Emit passenger location update
-  void updatePassengerLocation(String passengerId, double latitude, double longitude,String socketId) {
-    emit("update-passenger-location", {
-      "passengerId": passengerId,
-      "latitude": latitude,
-      "longitude": longitude,
-      "socketId":socketId,
-    });
-  }
-
-  /// Listen for incoming ride requests
-  void listenForRideRequests() {
-    socket?.on('ride-request', (data) {
-      print('Ride request received: $data');
-      // Add any additional handling logic here
-    });
-  }
-
-
-  /// Emit ride-related events
-  void rideCancel(String rideId, String cancelledBy) {
-    emit("ride-cancel", {"rideId": rideId, "cancelledBy": cancelledBy});
-  }
-
-  void acceptRide(String rideId, String driverId, Map<String, dynamic> pickupLocation) {
-    emit("accept-ride", {
-      "rideId": rideId,
-      "driverId": driverId,
-      "pickupLocation": pickupLocation,
-    });
-  }
-
-  void ridePickup(String rideId, String driverId, String passengerId) {
-    emit("ride-pickup", {
-      "rideId": rideId,
-      "driverId": driverId,
-      "passengerId": passengerId,
-    });
-  }
-
-  void rideCompleted(String rideId, String driverId, String passengerId, double fare) {
-    emit("ride-completed", {
-      "rideId": rideId,
-      "driverId": driverId,
-      "passengerId": passengerId,
-      "fare": fare,
-    });
   }
 
   /// Register listeners for incoming events
@@ -244,9 +222,23 @@ class UserWebSocketService {
     });
   }
 
+  /// Listen for incoming ride requests
+  void listenForRideRequests() {
+    socket?.on('ride-request', (data) {
+      print('Ride request received: $data');
+    });
+  }
+
   /// Disconnect the socket
   void disconnect() {
     socket?.disconnect();
     print("Disconnected from WebSocket Server");
+    _isConnected = false;
+    socketId = null; // Reset socketId on disconnect
+  }
+
+  /// Getter for socketId
+  String? getSocketId() {
+    return socketId;
   }
 }

@@ -5,10 +5,16 @@ import 'package:kantipur_ride/controller/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:kantipur_ride/services/web_socket_services.dart';
 
+class RideRequestController extends GetxController {
+  final socketService = UserWebSocketService();
 
-class RideRequestController extends GetxController{
+  @override
+  void onInit() {
+    super.onInit();
+    // Initialize the WebSocket connection
+    socketService.initializeConnection("https://kantipur-rides-backend.onrender.com");
+  }
 
-  UserWebSocketService webSocketService = UserWebSocketService();
   Future<void> rideCancelled() async {
     final apiUrl =
         'https://kantipur-rides-backend.onrender.com/api/v1/driver/cancelRide/0281abd4-6af5-418d-8797-ff51432c63db';
@@ -38,8 +44,8 @@ class RideRequestController extends GetxController{
       if (response.statusCode == 200) {
         final responseData = response.data;
         if (responseData['success'] == true) {
-          webSocketService.listenForRideRequests();
-          webSocketService.registerSocketListeners();
+          socketService.listenForRideRequests();
+          socketService.registerSocketListeners();
 
           Get.snackbar(
             "Success",

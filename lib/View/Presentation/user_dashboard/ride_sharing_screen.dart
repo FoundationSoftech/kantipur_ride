@@ -21,8 +21,9 @@ class RideSharingScreen extends StatefulWidget {
 
 class _RideSharingScreenState extends State<RideSharingScreen> {
 
-  final RideSharingController rideSharingController = Get.put(RideSharingController());
-  UserWebSocketService webSocketService = UserWebSocketService();
+  final RideSharingController rideSharingController = Get.find<RideSharingController>();
+
+
 
 
   GoogleMapController? mapController;
@@ -52,7 +53,7 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
   void dispose() {
     destinationTextController.dispose();
     Get.delete<RideSharingController>();
-    webSocketService.disconnect(); // Ensure to disconnect when disposing
+    rideSharingController.webSocketService.disconnect(); // Ensure to disconnect when disposing
     // TODO: implement dispose
     super.dispose();
   }
@@ -61,33 +62,6 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
     await _getCurrentLocation();
     // _setupWebSocketListeners();
   }
-
-  // void _setupWebSocketListeners() {
-  //   webSocketService.on('ride-accepted', (data) {
-  //     print("Ride Accepted: $data");
-  //     rideSharingController.currentRideId.value = data['rideId'];
-  //     Get.snackbar("Ride Accepted", "Your ride has been accepted by the driver.");
-  //   });
-  //
-  //   webSocketService.on('ride-canceled', (data) {
-  //     print("Ride Canceled: $data");
-  //     rideSharingController.currentRideId.value = null;  // Safe assignment now
-  //     Get.snackbar("Ride Canceled", "Your ride has been canceled.");
-  //   });
-  //
-  //   webSocketService.on('ride-started', (data) {
-  //     print("Ride Started: $data");
-  //     rideSharingController.currentRideStatus.value = "In Progress";
-  //     Get.snackbar("Ride Started", "Your ride is now in progress.");
-  //   });
-  //
-  //   webSocketService.on('ride-completed', (data) {
-  //     print("Ride Completed: $data");
-  //     rideSharingController.currentRideStatus.value = "Completed";
-  //     rideSharingController.currentRideId.value = null;  // Safe assignment
-  //     Get.snackbar("Ride Completed", "Your ride has been completed successfully.");
-  //   });
-  // }
 
 
   void _triggerRideRequest() {
@@ -104,7 +78,7 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
      };
 
      print("Triggering ride request with data: $data");
-     webSocketService.emit("ride-request", data);
+     rideSharingController.webSocketService.emit("ride-request", data);
 
      Get.snackbar("Ride Request Sent", "Your ride request has been sent.",
          snackPosition: SnackPosition.BOTTOM);
@@ -112,53 +86,6 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
      print("====On ride request event error ${e.toString()}");
     }
   }
-
-
-  void _triggerRideCancel() {
-    final data = {
-      "rideId": rideSharingController.currentRideId.value,
-      "passengerId": rideSharingController.passengerId.value,
-      "socketId": webSocketService.socket,
-    };
-
-    webSocketService.emit("ride-cancel", data);
-  }
-
-  void _triggerAcceptRide() {
-    final data = {
-      "rideId": rideSharingController.currentRideId.value,
-      "driverId": rideSharingController.driverId.value,
-      "latitude": 27.7172, // Replace with real location
-      "longitude": 85.3240, // Replace with real location
-      "socketId": webSocketService.socket,
-    };
-
-    webSocketService.emit("accept-ride", data);
-  }
-
-  void _triggerRidePickup() {
-    final data = {
-      "rideId": rideSharingController.currentRideId.value,
-      "driverId": rideSharingController.driverId.value,
-      "passengerId": rideSharingController.passengerId.value,
-      "pickupTime": DateTime.now().toIso8601String(),
-    };
-
-    webSocketService.emit("ride-pickup", data);
-  }
-
-  void _triggerRideComplete(double fare) {
-    final data = {
-      "rideId": rideSharingController.currentRideId.value,
-      "driverId": rideSharingController.driverId.value,
-      "passengerId": rideSharingController.passengerId.value,
-      "fare": fare,
-      "completionTime": DateTime.now().toIso8601String(),
-    };
-
-    webSocketService.emit("ride-completed", data);
-  }
-
 
   Future<void> _getCurrentLocation() async {
     try {

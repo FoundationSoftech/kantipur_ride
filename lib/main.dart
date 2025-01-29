@@ -9,11 +9,14 @@ import 'package:kantipur_ride/controller/ride_sharing_controller.dart';
 import 'View/Presentation/onboarding/user_login_screen.dart';
 import 'controller/option_controller.dart';
 import 'controller/shared_preferences.dart';
+import 'controller/user_login_controller.dart';
 
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
   Get.put(RideSharingController());
+  Get.put(UserLoginController());  // Initialize singleton
+  Get.put(PrefrencesManager());    // Initialize singleton
   await PrefrencesManager.init();
   Get.put(OptionController()); // Inject OptionController
 
