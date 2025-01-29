@@ -8,7 +8,7 @@ import 'package:dio/dio.dart' as dio;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../Components/dt_button.dart';
 import '../../../Components/expanded_bottom_nav_bar.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/cupertino.dart';
 
@@ -40,8 +40,7 @@ class _OTPScreenState extends State<OTPScreen> {
   final FocusNode _focusNode6 = FocusNode();
 
   final PrefrencesManager preferencesManager = Get.put(PrefrencesManager());
-  late IO.Socket socket;
-  StreamSubscription<Position>? positionStream;
+  final UserWebSocketService _socketService = UserWebSocketService(); // Singleton WebSocket Service
 
   @override
   void initState() {
@@ -52,7 +51,6 @@ class _OTPScreenState extends State<OTPScreen> {
 
   @override
   void dispose() {
-    socket.dispose();
     _focusNode1.dispose();
     _focusNode2.dispose();
     _focusNode3.dispose();
@@ -68,32 +66,13 @@ class _OTPScreenState extends State<OTPScreen> {
     super.dispose();
   }
 
-  // Initialize socket connection
+  // Initialize WebSocket connection using Singleton
   void _initializeSocket() {
-    socket = IO.io(
-      'https://kantipur-rides-backend.onrender.com',
-      IO.OptionBuilder().setTransports(['websocket']).build(),
-    );
-
-    socket.onConnect((_) {
-      print('Connected to the socket server. Socket ID: ${socket.id}');
-      _emitPassengerLocation();
-    });
-
-    socket.onDisconnect((_) {
-      print('Disconnected from the socket server');
-    });
-
-    socket.onError((error) {
-      print('Socket error: $error');
-    });
-
-    socket.connect();
+    _socketService.initializeConnection('https://kantipur-rides-backend.onrender.com');
   }
 
-  // Emit the passenger's location
+  // Emit passenger location to server
   void _emitPassengerLocation() async {
-    // Step 1: Check and request location permission
     LocationPermission permission = await Geolocator.checkPermission();
 
     if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
@@ -107,44 +86,27 @@ class _OTPScreenState extends State<OTPScreen> {
     }
 
     try {
-      // Step 2: Get current location
       Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       double latitude = position.latitude;
       double longitude = position.longitude;
 
-      // Step 3: Get user ID
       String? passengerId = await preferencesManager.getuserId();
+      String? socketId = _socketService.getSocketId();  // Get socketId from singleton
 
-      // Step 4: Ensure socket is connected before emitting location
-      String? socketId = UserWebSocketService().getSocketId();  // Use the singleton to get socketId
       if (socketId != null && socketId.isNotEmpty) {
         print('Socket connected, emitting location...');
 
-        // Step 5: Emit the location to the server
-        socket.emitWithAck("update-passenger-location", {
+        _socketService.emit("update-passenger-location", {
           "passengerId": passengerId,
           "currentLatitude": latitude,
           "currentLongitude": longitude,
-          "socketId": socketId,  // Use the stored socketId
-        }, ack: (response) {
-          print("Acknowledgment from server: $response");
-          if (response != null && response['success'] == true) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Location updated successfully')),
-            );
-          } else {
-            print("Error updating location: ${response["message"] ?? "Unknown error"}");
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to update location: ${response["message"] ?? "Unknown error"}')),
-            );
-          }
+          "socketId": socketId,
         });
 
-        // Step 6: Save the current location to preferences
         preferencesManager.saveCurrentLocation(
           latitude: latitude,
           longitude: longitude,
-          socketId: socketId, // Save the socket ID as well
+          socketId: socketId,
         );
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -152,9 +114,6 @@ class _OTPScreenState extends State<OTPScreen> {
         );
       } else {
         print("Socket not connected. Retrying...");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Socket not connected. Cannot emit location. Retrying...')),
-        );
       }
     } catch (e) {
       print("Error fetching location: $e");
@@ -163,7 +122,6 @@ class _OTPScreenState extends State<OTPScreen> {
       );
     }
   }
-
 
   // Submit OTP and handle login
   void _submitOTP() async {
@@ -178,8 +136,6 @@ class _OTPScreenState extends State<OTPScreen> {
           data: {'code': otp},
         );
 
-        print('OTP Verification Response: ${response.data}');
-
         if (response.data['success']) {
           bool isUserExist = response.data['data']['isUserExist'];
 
@@ -189,9 +145,6 @@ class _OTPScreenState extends State<OTPScreen> {
               data: {'email': widget.email},
             );
 
-            print('Full login response: ${loginResponse.data}');
-
-            // Inside _submitOTP() after successful login
             if (loginResponse.data != null && loginResponse.data['success'] == true) {
               String? token = loginResponse.data['data']['token'];
               String? userId = loginResponse.data['data']['userData']['userId'];
@@ -200,19 +153,15 @@ class _OTPScreenState extends State<OTPScreen> {
                 await preferencesManager.saveAuthToken(token);
                 await preferencesManager.saveuserId(userId);
 
-                // Emit passenger location after successful login
-               _emitPassengerLocation();
+                _emitPassengerLocation();
 
                 Get.off(() => ExpandedBottomNavBar(), transition: Transition.rightToLeft);
               } else {
-                print('Error: token or userId is null. Cannot proceed.');
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Login failed: token or userId is null. Please try again.')),
                 );
               }
-            }
-            else {
-              print('Login failed: ${loginResponse.data['message']}');
+            } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Login failed: ${loginResponse.data['message']}')),
               );
@@ -226,7 +175,6 @@ class _OTPScreenState extends State<OTPScreen> {
           );
         }
       } on dio.DioException catch (e) {
-        print('Error during OTP submission: ${e.response?.data ?? e.message}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${e.response?.data ?? e.message}')),
         );
@@ -243,7 +191,7 @@ class _OTPScreenState extends State<OTPScreen> {
     return Scaffold(
       appBar: AppBar(title: Text('Verify OTP')),
       body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 30.h),
         child: Column(
           children: [
             Row(
@@ -257,7 +205,7 @@ class _OTPScreenState extends State<OTPScreen> {
                 _buildOTPField(_controller6, _focusNode6, null),
               ],
             ),
-            SizedBox(height: 30),
+            SizedBox(height: 30.h),
             CustomButton(
               text: 'Submit',
               bottonColor: Colors.blue,
@@ -275,8 +223,8 @@ class _OTPScreenState extends State<OTPScreen> {
 
   Widget _buildOTPField(TextEditingController controller, FocusNode focusNode, FocusNode? nextFocusNode) {
     return Container(
-      width: 40,
-      height: 60,
+      width: 40.w,
+      height: 60.h,
       child: TextField(
         controller: controller,
         focusNode: focusNode,
