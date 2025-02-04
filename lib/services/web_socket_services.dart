@@ -134,29 +134,22 @@ import 'package:get/get.dart';
 
 
 
-import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:get/get.dart';
-
 class UserWebSocketService {
   static final UserWebSocketService _instance = UserWebSocketService._internal();
 
-  factory UserWebSocketService() {
-    return _instance;
-  }
+  factory UserWebSocketService() => _instance;
 
   IO.Socket? socket;
   bool _isConnected = false;
-
-  // socketId will be stored here
-  String? socketId;
+  String? socketId; // Store socket ID
 
   UserWebSocketService._internal();
 
-  /// Initialize and connect to the server
+  /// Initialize WebSocket connection
   void initializeConnection(String serverUrl) {
     if (socket != null && socket!.connected) {
-      print("Socket already connected");
-      return; // Prevent multiple connections
+      print("⚡ WebSocket already connected with ID: ${socket?.id}");
+      return;
     }
 
     socket = IO.io(
@@ -164,77 +157,63 @@ class UserWebSocketService {
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .enableAutoConnect()
+          .setQuery({'userType': 'user'})  // Add user type
           .build(),
     );
 
-    // Register connection event handlers
     socket?.onConnect((_) {
-      print("Connected to WebSocket Server with ID: ${socket?.id}");
-      socketId = socket?.id; // Set socketId when connected
-      Get.snackbar("Connection Status", "Connected to the server");
-      _isConnected = true;
+      print("✅ Connected to WebSocket Server with ID: ${socket?.id}");
+      print("✅ Connection status: ${socket?.connected}");
     });
 
-    socket?.onDisconnect((_) {
-      print("Disconnected from WebSocket Server");
-      Get.snackbar("Connection Status", "Disconnected from the server");
-      _isConnected = false;
-      socketId = null; // Reset socketId on disconnect
+    socket?.onError((error) {
+      print("🔴 Socket Error: $error");
     });
-
-    // Only register listeners once
-    if (!_isConnected) {
-      registerSocketListeners();
-    }
   }
 
   /// Emit events to the server
   void emit(String event, dynamic data) {
-    socket?.emit(event, data);
-    print("Emitted event: $event with data: $data");
+    if (socket?.connected == true) {
+      socket?.emit(event, data);
+      print("📤 Emitted event: $event with data: $data");
+    } else {
+      print("❌ WebSocket not connected. Cannot emit event.");
+    }
   }
 
-  /// Register listeners for incoming events
+  /// Register all necessary WebSocket event listeners
   void registerSocketListeners() {
+    socket?.on("ride-request", (data) {
+      print("📥 New ride request emitted: $data");
+    });
+
     socket?.on("ride-cancel", (data) {
-      print("Ride Cancelled: $data");
+      print("🚫 Ride Cancelled: $data");
       Get.snackbar("Ride Cancelled", "The ride was cancelled.");
     });
 
     socket?.on("accept-ride", (data) {
-      print("Ride Accepted: $data");
+      print("✅ Ride Accepted: $data");
       Get.snackbar("Ride Accepted", "Your ride request has been accepted.");
     });
 
     socket?.on("ride-pickup", (data) {
-      print("Ride Pickup: $data");
+      print("🚖 Ride Pickup: $data");
       Get.snackbar("Ride Pickup", "Your driver has arrived for the pickup.");
     });
 
     socket?.on("ride-completed", (data) {
-      print("Ride Completed: $data");
+      print("🏁 Ride Completed: $data");
       Get.snackbar("Ride Completed", "Your ride has been completed!");
     });
-
-    socket?.on("ride-request", (data) {
-      print("Ride Request received: $data");
-      Get.snackbar("New Ride Request", "A new ride request has been received!");
-    });
   }
 
-  /// Listen for incoming ride requests
-  void listenForRideRequests() {
-    socket?.on('ride-request', (data) {
-      print('Ride request received: $data');
-    });
-  }
-
-  /// Disconnect the socket
+  /// Disconnect the WebSocket
   void disconnect() {
     socket?.disconnect();
-    print("Disconnected from WebSocket Server");
+    print("❌ WebSocket Disconnected");
     _isConnected = false;
-    socketId = null; // Reset socketId on disconnect
+    socketId = null;
   }
 
   /// Getter for socketId
@@ -242,3 +221,4 @@ class UserWebSocketService {
     return socketId;
   }
 }
+

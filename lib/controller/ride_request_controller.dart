@@ -44,7 +44,7 @@ class RideRequestController extends GetxController {
       if (response.statusCode == 200) {
         final responseData = response.data;
         if (responseData['success'] == true) {
-          socketService.listenForRideRequests();
+          // socketService.listenForRideRequests();
           socketService.registerSocketListeners();
 
           Get.snackbar(

@@ -21,10 +21,7 @@ class RideSharingScreen extends StatefulWidget {
 
 class _RideSharingScreenState extends State<RideSharingScreen> {
 
-  final RideSharingController rideSharingController = Get.find<RideSharingController>();
-
-
-
+  final RideSharingController rideSharingController = Get.put(RideSharingController());
 
   GoogleMapController? mapController;
   Set<Polyline> _polylines = {};
@@ -65,27 +62,28 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
 
 
   void _triggerRideRequest() {
-   try{
-     final data = {
-       "rideId": "ride-${DateTime.now().millisecondsSinceEpoch}",
-       // "passengerId": rideSharingController.passengerId,
-       "pickupLatitude": rideSharingController.pickupPlaceController.text,
-       "pickupLongitude": rideSharingController.pickupPlaceController.text,
-       "destinationLatitude": rideSharingController.destinationLocation.value?.latitude,
-       "destinationLongitude": rideSharingController.destinationLocation.value?.longitude,
-       "rideType": "bike",
-       // "socketId": webSocketService.socket,
-     };
+    try {
+      final data = {
+        "rideId": "ride-${DateTime.now().millisecondsSinceEpoch}",
+        "pickupLatitude": rideSharingController.sourceLocation.value?.latitude,   // FIXED
+        "pickupLongitude": rideSharingController.sourceLocation.value?.longitude, // FIXED
+        "destinationLatitude": rideSharingController.destinationLocation.value?.latitude, // FIXED
+        "destinationLongitude": rideSharingController.destinationLocation.value?.longitude, // FIXED
+        "rideType": "bike",
+      };
 
-     print("Triggering ride request with data: $data");
-     rideSharingController.webSocketService.emit("ride-request", data);
+      print("Triggering ride request with data: $data");
 
-     Get.snackbar("Ride Request Sent", "Your ride request has been sent.",
-         snackPosition: SnackPosition.BOTTOM);
-   }catch(e){
-     print("====On ride request event error ${e.toString()}");
+      rideSharingController.webSocketService.emit("ride-request", data);
+
+      Get.snackbar("Ride Request Sent", "Your ride request has been sent.",
+          snackPosition: SnackPosition.BOTTOM);
+    } catch (e) {
+      print("==== On ride request event error ${e.toString()}");
     }
   }
+
+
 
   Future<void> _getCurrentLocation() async {
     try {
@@ -427,17 +425,31 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
 
   Widget _buildSearchRideButton() {
     return CustomButton(
-      onPressed: () {
+      onPressed: () async {
+        // Show loading dialog
         Get.dialog(
           Center(child: CircularProgressIndicator()),
+          barrierDismissible: false, // Prevent dismissing the dialog by tapping outside
         );
 
-        if (sourceLocation == null ||  distance == null || price == null) {
+        // Validate all required fields
+        if (sourceLocation == null ||
+            destinationLocation== null ||
+            distance!.isEmpty ||
+            price!.isEmpty ||
+
+            destinationTextController.text.isEmpty) {
+          Get.back(); // Close the loading dialog
           Get.snackbar("Error", "Please fill in all ride details.",
               snackPosition: SnackPosition.BOTTOM);
         } else {
-          _triggerRideRequest();
-          rideSharingController.createRide();  // Proceed with creating the ride
+          try {
+            await rideSharingController.createRide(); // Proceed with creating the ride
+          } catch (e) {
+            Get.back(); // Close the loading dialog
+            Get.snackbar("Error", "Failed to create ride: ${e.toString()}",
+                snackPosition: SnackPosition.BOTTOM);
+          }
         }
       },
       text: "Search Ride",

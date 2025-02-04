@@ -10,7 +10,6 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/web_socket_services.dart';
 
-
 class RideSharingController extends GetxController {
   // Ride details
   var rideType = 'bike'.obs; // Default to 'bike'
@@ -24,10 +23,17 @@ class RideSharingController extends GetxController {
   RxString price = ''.obs;
   RxSet<Polyline> polylines = RxSet<Polyline>();
 
-  final UserWebSocketService webSocketService = UserWebSocketService(); // Singleton instance
+  final PrefrencesManager prefrencesManager = PrefrencesManager();
+  final UserWebSocketService webSocketService = UserWebSocketService();
 
   RxString passengerId = ''.obs;
   RxString driverId = ''.obs;
+  Rx<String?> currentRideId = Rx<String?>(null);
+  Rx<String> currentRideStatus = Rx<String>("");
+
+  final String apiUrl = 'https://kantipur-rides-backend.onrender.com/api/v1/user/createRide';
+  final TextEditingController destinationTextController = TextEditingController();
+  final TextEditingController pickupPlaceController = TextEditingController();
 
   @override
   void onInit() {
@@ -42,70 +48,93 @@ class RideSharingController extends GetxController {
     super.onClose();
   }
 
-  // Define the variable
-  Rx<String?> currentRideId = Rx<String?>(null);  // Nullable reactive string
-  Rx<String> currentRideStatus = Rx<String>("");  // Non-nullable reactive string
-
-  // API endpoint
-  final String apiUrl =
-      'https://kantipur-rides-backend.onrender.com/api/v1/user/createRide';
-
   Future<void> createRide() async {
-    if (!isRideDataComplete()) {
-      Get.snackbar("Error", "Please fill in all ride details", snackPosition: SnackPosition.BOTTOM);
-      return;
-    }
-
-    String? token = await PrefrencesManager().getAuthToken();
-    if (token == null) {
-      Get.snackbar("Error", "User is not authenticated. Please login again.", snackPosition: SnackPosition.BOTTOM);
-      return;
-    }
-
-    final body = {
-      "pickupLatitude": sourceLocation.value!.latitude,
-      "pickupLongitude": sourceLocation.value!.longitude,
-      "destinationLatitude": destinationLocation.value!.latitude,
-      "destinationLongitude": destinationLocation.value!.longitude,
-      "fare": double.parse(price.value),
-      "distance": double.parse(distance.value.split(" ")[0]),
-      "pickupPlaceName": pickupPlaceController.text.trim(),
-      "destinationPlaceName": destinationTextController.text.trim(),
-      "rideType": rideType.value,
-    };
-
-    print("Ride Request Body: $body");
-
     try {
+      // Validate required fields
+      if (sourceLocation.value == null || destinationLocation.value == null) {
+        throw Exception("Source or destination location is not set.");
+      }
+
+      // Get token with await
+      final token = await prefrencesManager.getAuthToken();
+      if (token == null || token.isEmpty) {
+        throw Exception("Authentication token is missing. Please login again.");
+      }
+      print("Using token: $token");
+
+      // Get user ID with await
+      final userId = await prefrencesManager.getuserId();
+      if (userId == null || userId.isEmpty) {
+        throw Exception("User ID is missing. Please login again.");
+      }
+      print("User ID: $userId");
+
+      // Clean distance and price
+      final cleanDistance = distance.value.replaceAll(RegExp(r'[^0-9.]'), '');
+      final cleanFare = price.value.replaceAll(RegExp(r'[^0-9.]'), '');
+
+      print('Clean distance: $cleanDistance');
+      print('Clean fare: $cleanFare');
+
+      // Create the request body
+      final Map<String, dynamic> body = {
+        "pickupLatitude": sourceLocation.value?.latitude ?? 0.0,
+        "pickupLongitude": sourceLocation.value?.longitude ?? 0.0,
+        "destinationLatitude": destinationLocation.value?.latitude ?? 0.0,
+        "destinationLongitude": destinationLocation.value?.longitude ?? 0.0,
+        "fare": double.parse(cleanFare), // Ensure it's a number
+        "distance": double.parse(cleanDistance), // Ensure it's a number
+        "pickupPlaceName": pickupPlaceController.text,
+        "destinationPlaceName": destinationTextController.text,
+        "rideType": rideType.value, // Ensure it sends "cab" as expected
+      };
+
+
+
+      print('Request body: ${jsonEncode(body)}');
+
       final response = await http.post(
         Uri.parse(apiUrl),
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
+          "Authorization": "Bearer $token",  // Ensure proper token format
         },
         body: jsonEncode(body),
       );
 
+      print("API Response Status Code: ${response.statusCode}");
       print("API Response: ${response.body}");
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (responseData['success']) {
-          Get.snackbar("Success", "Ride Created Successfully", snackPosition: SnackPosition.BOTTOM);
-          webSocketService.registerSocketListeners();
-          Get.to(() => RiderRequestUser());
-        } else {
-          print("Failed to create ride: ${responseData['message']}");
-        }
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        Get.snackbar(
+          "Success",
+          "Ride Created Successfully",
+          snackPosition: SnackPosition.BOTTOM,
+        );
       } else if (response.statusCode == 401) {
-        Get.snackbar("Error", "Unauthorized. Please login again.", snackPosition: SnackPosition.BOTTOM);
+        throw Exception("Session expired. Please login again.");
       } else {
-        print("Error: ${response.statusCode}");
+        throw Exception("Failed to create ride: ${responseData['message']}");
       }
     } catch (e) {
       print("Error creating ride: $e");
+      Get.snackbar(
+        "Error",
+        "Failed to create ride: ${e.toString()}",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+
+      if (e.toString().contains("unauthorized") || e.toString().contains("expired")) {
+        // Redirect to login if session expired
+        // Get.offAll(() => LoginScreen());
+      }
+    } finally {
+      Get.back(); // Close the loading dialog
     }
   }
+
 
   bool isRideDataComplete() {
     print("Source Location: $sourceLocation");
@@ -116,7 +145,6 @@ class RideSharingController extends GetxController {
     print("Pickup location: ${pickupPlaceController.text}");
     print("Ride Type: $rideType");
 
-    // Ensure all required fields are non-empty or non-null
     return sourceLocation.value != null &&
         destinationLocation.value != null &&
         distance.value.isNotEmpty &&
@@ -125,13 +153,9 @@ class RideSharingController extends GetxController {
         pickupPlaceController.text.isNotEmpty;
   }
 
-  // Function to update ride type
   void setRideType(String type) {
     rideType.value = type;
   }
-
-  final TextEditingController destinationTextController = TextEditingController();
-  final TextEditingController pickupPlaceController = TextEditingController();
 
   Future<void> getCurrentLocation() async {
     try {
