@@ -24,7 +24,7 @@ class RideSharingController extends GetxController {
   RxSet<Polyline> polylines = RxSet<Polyline>();
 
   final PrefrencesManager prefrencesManager = PrefrencesManager();
-  final UserWebSocketService webSocketService = UserWebSocketService();
+
 
   RxString passengerId = ''.obs;
   RxString driverId = ''.obs;
@@ -35,11 +35,160 @@ class RideSharingController extends GetxController {
   final TextEditingController destinationTextController = TextEditingController();
   final TextEditingController pickupPlaceController = TextEditingController();
 
+  // Use Get.find to get the singleton instance
+  final UserWebSocketService webSocketService = Get.find<UserWebSocketService>();
+
+  Rx<Map<String, dynamic>?> rideCancel = Rx<Map<String, dynamic>?>(null);
+
+  // Keep the ride request as Rx
+  Rx<Map<String, dynamic>?> acceptRide = Rx<Map<String, dynamic>?>(null);
+
+  Rx<Map<String, dynamic>?> cancelRide = Rx<Map<String, dynamic>?>(null);
+
   @override
   void onInit() {
     super.onInit();
-    webSocketService.initializeConnection("https://kantipur-rides-backend.onrender.com");
-    _registerWebSocketListeners();
+
+    // Get driver ID when initializing
+    prefrencesManager.getuserId().then((id) {
+      if (id != null) {
+        driverId.value = id;
+      }
+    });
+
+    // Set up the callback
+    webSocketService.onRideAcceptReceived = (rideData) {
+      print("RiderMapController received ride data: $rideData"); // Debug log
+      try {
+        currentRideId.value = rideData['rideId'] ?? '';
+        acceptRide.value = rideData;
+        update();
+      } catch (e) {
+        print("Error updating ride request in controller: $e"); // Debug log
+      }
+    };
+
+
+    // Set up WebSocket listener
+    UserWebSocketService().onRideAcceptReceived= (rideData) {
+      print("Ride request data received: $rideData");
+      acceptRide.value = rideData;
+      update(); // Trigger UI update
+    };
+
+
+    // Set up WebSocket connection and listener
+    prefrencesManager.getAuthToken().then((token) {
+      if (token != null) {
+        webSocketService.initializeConnection(
+            "https://kantipur-rides-backend.onrender.com",
+            token
+        );
+
+        // Single listener for ride requests
+        webSocketService.socket?.on('accept-ride', (data) {
+          print('Raw ride accepted: $data'); // Debug log
+
+          if (data != null) {
+            try {
+              currentRideId.value = data['rideId'] ?? '';
+              acceptRide.value = Map<String, dynamic>.from(data);
+
+              print('Accepted ride request: ${acceptRide.value}'); // Debug log
+
+              update();
+
+              Get.snackbar(
+                "Accpted ride",
+                "From: ${data['pickupPlaceName']}\nTo: ${data['destinationPlaceName']}",
+                duration: Duration(seconds: 10),
+                backgroundColor: Colors.green,
+                colorText: Colors.white,
+                snackPosition: SnackPosition.TOP,
+              );
+            } catch (e) {
+              print("Error processing ride request: $e");
+              Get.snackbar(
+                "Error",
+                "Failed to process ride request: $e",
+                backgroundColor: Colors.red,
+                colorText: Colors.white,
+              );
+            }
+          }
+        });
+      }
+    });
+
+    // Get driver ID when initializing
+    prefrencesManager.getuserId().then((id) {
+      if (id != null) {
+        driverId.value = id;
+      }
+    });
+
+    // Set up the callback
+    webSocketService.onRideCancelReceived = (rideData) {
+      print("RiderMapController cancel ride data: $rideData"); // Debug log
+      try {
+        currentRideId.value = rideData['rideId'] ?? '';
+        cancelRide.value = rideData;
+        update();
+      } catch (e) {
+        print("Error updating ride request in controller: $e"); // Debug log
+      }
+    };
+
+    // Set up WebSocket listener
+    UserWebSocketService().onRideCancelReceived= (rideData) {
+      print("Ride request data received: $rideData");
+      cancelRide.value = rideData;
+      update(); // Trigger UI update
+    };
+
+
+    // Set up WebSocket connection and listener
+    prefrencesManager.getAuthToken().then((token) {
+      if (token != null) {
+        webSocketService.initializeConnection(
+            "https://kantipur-rides-backend.onrender.com",
+            token
+        );
+
+        // Single listener for ride requests
+        webSocketService.socket?.on('ride-cancel', (data) {
+          print('Raw ride accepted: $data'); // Debug log
+
+          if (data != null) {
+            try {
+              currentRideId.value = data['rideId'] ?? '';
+              cancelRide.value = Map<String, dynamic>.from(data);
+
+              print('Accepted ride request: ${cancelRide.value}'); // Debug log
+
+              update();
+              Get.snackbar(
+                "Cancel ride",
+                "From: ${data['pickupPlaceName']}\nTo: ${data['destinationPlaceName']}",
+                duration: Duration(seconds: 10),
+                backgroundColor: Colors.red,
+                colorText: Colors.white,
+                snackPosition: SnackPosition.TOP,
+              );
+            } catch (e) {
+              print("Error processing ride request: $e");
+              Get.snackbar(
+                "Error",
+                "Failed to process ride request: $e",
+                backgroundColor: Colors.red,
+                colorText: Colors.white,
+              );
+            }
+          }
+        });
+      }
+    });
+
   }
 
   @override
@@ -87,14 +236,13 @@ class RideSharingController extends GetxController {
         "pickupPlaceName": pickupPlaceController.text,
         "destinationPlaceName": destinationTextController.text,
         "rideType": rideType.value, // Ensure it sends "cab" as expected
+        "userId": userId, // Include user ID
       };
-
-
 
       print('Request body: ${jsonEncode(body)}');
 
       final response = await http.post(
-        Uri.parse(apiUrl),
+        Uri.parse('https://kantipur-rides-backend.onrender.com/api/v1/user/createRide'),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",  // Ensure proper token format
@@ -136,110 +284,8 @@ class RideSharingController extends GetxController {
   }
 
 
-  bool isRideDataComplete() {
-    print("Source Location: $sourceLocation");
-    print("Destination Location: $destinationLocation");
-    print("Distance: $distance");
-    print("Price: $price");
-    print("Destination Text: ${destinationTextController.text}");
-    print("Pickup location: ${pickupPlaceController.text}");
-    print("Ride Type: $rideType");
-
-    return sourceLocation.value != null &&
-        destinationLocation.value != null &&
-        distance.value.isNotEmpty &&
-        price.value.isNotEmpty &&
-        destinationTextController.text.isNotEmpty &&
-        pickupPlaceController.text.isNotEmpty;
-  }
-
   void setRideType(String type) {
     rideType.value = type;
-  }
-
-  Future<void> getCurrentLocation() async {
-    try {
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      sourceLocation.value = LatLng(position.latitude, position.longitude);
-      await _getAddressFromLatLng(sourceLocation.value!);
-    } catch (e) {
-      print("Error fetching current location: $e");
-    }
-  }
-
-  Future<void> _getAddressFromLatLng(LatLng position) async {
-    try {
-      final response = await http.get(Uri.parse(
-          'https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.latitude},${position.longitude}&key=$apiKey'));
-      final data = jsonDecode(response.body);
-      if (data['results'].isNotEmpty) {
-        sourceAddress.value = data['results'][0]['formatted_address'];
-      }
-    } catch (e) {
-      print("Error fetching address: $e");
-    }
-  }
-
-  Future<void> onPlaceSelected(String description) async {
-    try {
-      final response = await http.get(Uri.parse(
-          'https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=$description&inputtype=textquery&fields=geometry&key=$apiKey'));
-      final data = jsonDecode(response.body);
-
-      if (data['candidates'] != null && data['candidates'].isNotEmpty) {
-        final location = data['candidates'][0]['geometry']['location'];
-        destinationLocation.value = LatLng(location['lat'], location['lng']);
-        destinationAddress.value = description.trim();
-        await drawRoute();
-      }
-    } catch (e) {
-      print("Error selecting place: $e");
-    }
-  }
-
-  Future<void> drawRoute() async {
-    if (sourceLocation.value == null || destinationLocation.value == null) {
-      print("Error: Source or destination is not set.");
-      return;
-    }
-
-    final url =
-        'https://maps.googleapis.com/maps/api/directions/json?origin=${sourceLocation.value!.latitude},${sourceLocation.value!.longitude}&destination=${destinationLocation.value!.latitude},${destinationLocation.value!.longitude}&key=$apiKey';
-
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['routes'] != null && data['routes'].isNotEmpty) {
-          final route = data['routes'].first;
-          final polylinePoints = PolylinePoints().decodePolyline(route['overview_polyline']['points']);
-          final routePoints = polylinePoints.map((point) => LatLng(point.latitude, point.longitude)).toList();
-
-          polylines.add(Polyline(
-            polylineId: PolylineId("route"),
-            points: routePoints,
-            color: Colors.greenAccent,
-            width: 5,
-          ));
-
-          distance.value = route['legs'][0]['distance']['text'];
-          duration.value = route['legs'][0]['duration']['text'];
-          price.value = (route['legs'][0]['distance']['value'] / 1000 * 20).toStringAsFixed(2);
-        }
-      }
-    } catch (e) {
-      print("Error drawing route: $e");
-    }
-  }
-
-  void _registerWebSocketListeners() {
-    webSocketService.socket?.on("driver-location-updated", (data) {
-      print("Driver location updated: $data");
-    });
-
-    webSocketService.socket?.on("ride-completed", (data) {
-      Get.snackbar("Ride Completed", "Your ride has been completed!");
-    });
   }
 }
 

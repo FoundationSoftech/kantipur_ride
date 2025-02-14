@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:kantipur_ride/Components/expanded_bottom_nav_bar.dart';
 import 'package:kantipur_ride/controller/ride_sharing_controller.dart';
+import 'package:kantipur_ride/services/web_socket_services.dart';
 import 'View/Presentation/onboarding/user_login_screen.dart';
 import 'controller/option_controller.dart';
 import 'controller/shared_preferences.dart';
@@ -14,6 +15,7 @@ import 'controller/user_login_controller.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
+  Get.put(UserWebSocketService(), permanent: true);
   Get.put(RideSharingController());
   Get.put(UserLoginController());  // Initialize singleton
   Get.put(PrefrencesManager());    // Initialize singleton
@@ -53,6 +55,7 @@ class MyApp extends StatelessWidget {
                 debugShowCheckedModeBanner: false,
                 home: AnimatedSplashScreen(
                   splash: 'assets/logo.png',
+
                   splashIconSize: 200,
                   splashTransition: SplashTransition.scaleTransition,
                   backgroundColor: Colors.black,

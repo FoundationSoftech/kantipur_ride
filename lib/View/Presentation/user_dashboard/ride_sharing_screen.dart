@@ -13,6 +13,9 @@ import 'package:kantipur_ride/controller/ride_sharing_controller.dart';
 import 'package:kantipur_ride/services/web_socket_services.dart';
 import 'package:kantipur_ride/utils/dt_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:shimmer/shimmer.dart';
+import '../../../controller/shared_preferences.dart';
 
 class RideSharingScreen extends StatefulWidget {
   @override
@@ -21,8 +24,8 @@ class RideSharingScreen extends StatefulWidget {
 
 class _RideSharingScreenState extends State<RideSharingScreen> {
 
-  final RideSharingController rideSharingController = Get.put(RideSharingController());
 
+  final UserWebSocketService webSocketService = UserWebSocketService(); // Singleton instance
   GoogleMapController? mapController;
   Set<Polyline> _polylines = {};
   LatLng? sourceLocation;
@@ -40,48 +43,124 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
 
   String rideType = "bike"; // Set a default value or update it as needed
 
+  bool rideAccepted = false;  // Track if the ride is accepted
+  Map<String, dynamic> driverDetails = {};  // Store driver details
+
+  Function(Map<String, dynamic>)? onRideStatusUpdate;
+  final userWebSocket = UserWebSocketService();
+
+  final RideSharingController rideSharingController = Get.put(RideSharingController());
+  final PrefrencesManager prefrencesManager = PrefrencesManager();
+
   @override
   void initState() {
     super.initState();
-    _initialize();
+    _initialize();  // Initial setup like location fetching
+    setupRideAcceptanceListener();
+    setupRideCancelListener();
+    webSocketService.socket?.on('ride-accept', (data) {
+      print("Ride accepted event received: $data");
+    });
+
+    webSocketService.socket?.on('ride-cancel', (data) {
+      print("Ride cancel event received: $data");
+    });
+
+
+    UserWebSocketService().reconnect(); // Reconnect WebSocket on app refresh
   }
 
   @override
   void dispose() {
     destinationTextController.dispose();
+    webSocketService.socket?.clearListeners();  // Remove WebSocket listeners
+    webSocketService.disconnect();  // Disconnect WebSocket
     Get.delete<RideSharingController>();
-    rideSharingController.webSocketService.disconnect(); // Ensure to disconnect when disposing
-    // TODO: implement dispose
     super.dispose();
   }
+
 
   void _initialize() async {
     await _getCurrentLocation();
     // _setupWebSocketListeners();
   }
 
-
-  void _triggerRideRequest() {
-    try {
-      final data = {
-        "rideId": "ride-${DateTime.now().millisecondsSinceEpoch}",
-        "pickupLatitude": rideSharingController.sourceLocation.value?.latitude,   // FIXED
-        "pickupLongitude": rideSharingController.sourceLocation.value?.longitude, // FIXED
-        "destinationLatitude": rideSharingController.destinationLocation.value?.latitude, // FIXED
-        "destinationLongitude": rideSharingController.destinationLocation.value?.longitude, // FIXED
-        "rideType": "bike",
-      };
-
-      print("Triggering ride request with data: $data");
-
-      rideSharingController.webSocketService.emit("ride-request", data);
-
-      Get.snackbar("Ride Request Sent", "Your ride request has been sent.",
-          snackPosition: SnackPosition.BOTTOM);
-    } catch (e) {
-      print("==== On ride request event error ${e.toString()}");
+  void _callDriver(String phoneNumber) async {
+    final Uri phoneUri = Uri(scheme: "tel", path: phoneNumber);
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    } else {
+      print("Could not launch phone dialer");
     }
   }
+
+  bool isLoading = false;
+
+  void _searchRide() async {
+    // Validate all required fields
+    if (sourceLocation == null ||
+        destinationLocation == null ||
+        distance!.isEmpty ||
+        price!.isEmpty ||
+        destinationTextController.text.isEmpty) {
+      if (Get.isDialogOpen!) {
+        Get.back(); // Close the loading dialog safely
+      }
+
+      setState(() {
+        isLoading = false;
+      });
+
+      Future.delayed(Duration(milliseconds: 300), () {
+        Get.snackbar("Error", "Please fill in all ride details.",
+            snackPosition: SnackPosition.BOTTOM);
+      });
+      return;
+    }
+
+    try {
+      await rideSharingController.createRide(); // Proceed with creating the ride
+
+      if (Get.isDialogOpen == true) {
+        Get.back(); // Close the loading dialog safely
+      }
+
+
+      setState(() {
+        isLoading = false;
+      });
+
+      Future.delayed(Duration(milliseconds: 300), () {
+        Get.snackbar("Success", "Ride created successfully.",
+            snackPosition: SnackPosition.BOTTOM);
+      });
+    } catch (e) {
+      if (Get.isDialogOpen!) {
+        Get.back(); // Close the loading dialog safely
+      }
+
+      setState(() {
+        isLoading = false;
+      });
+
+      Future.delayed(Duration(milliseconds: 300), () {
+        Get.snackbar("Error", "Failed to create ride: ${e.toString()}",
+            snackPosition: SnackPosition.BOTTOM);
+      });
+    }
+  }
+
+
+  Widget _buildSearchRideButton() {
+    return CustomButton(
+      onPressed: _searchRide,
+      text: "Search Ride",
+      textColor: Colors.white,
+      width: double.infinity,
+      bottonColor: AppColors.greenColor,
+    );
+  }
+
 
 
 
@@ -268,16 +347,128 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
     return deg * (pi / 180);
   }
 
+  void setupRideAcceptanceListener() {
+    UserWebSocketService().socket?.on('accept-ride', (data) {
+      print("Ride accepted event received: $data");
+
+      // Update the rideSharingController with the accepted ride data
+      rideSharingController.acceptRide.value = data;
+    });
+  }
+
+  void setupRideCancelListener() {
+    UserWebSocketService().socket?.on('ride-cancel', (data) {
+      print("Ride cancel event received: $data");
+
+      // Update the rideSharingController with the accepted ride data
+      rideSharingController.cancelRide.value = data;
+    });
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
           _buildGoogleMap(),
-          _buildTopSearchContainer(),
-          _buildBottomRideInfoContainer(),
+
+          Obx(() {
+            final request = rideSharingController.acceptRide.value;
+
+            if (request != null) {
+              print("Updating UI with accepted ride: $request"); // Debugging print
+
+              return DraggableScrollableSheet(
+                initialChildSize: 0.3,
+                minChildSize: 0.2,
+                maxChildSize: 0.6,
+                builder: (context, scrollController) {
+                  return Container(
+                    padding: EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.5),
+                          spreadRadius: 2,
+                          blurRadius: 5,
+                          offset: Offset(0, -3),
+                        ),
+                      ],
+                    ),
+                    child: ListView(
+                      controller: scrollController,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 5,
+                            margin: EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2.5),
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'Ride Accepted',
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green, // Indicate success
+                          ),
+                        ),
+                        SizedBox(height: 16.h),
+                        _buildInfoRow(Icons.location_on, 'Pickup', request['pickupPlaceName']),
+                        SizedBox(height: 8.h),
+                        _buildInfoRow(Icons.flag, 'Destination', request['destinationPlaceName']),
+                        SizedBox(height: 8.h),
+                        _buildInfoRow(Icons.attach_money, 'Fare', 'Rs. ${request['fare']}'),
+                        SizedBox(height: 8.h),
+                        _buildInfoRow(Icons.straighten, 'Distance', '${request['distance']} km'),
+                        SizedBox(height: 16.h),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }
+            return _buildBottomRideInfoContainer();
+          }),
         ],
       ),
+    );
+  }
+
+
+  // Helper method to build info row
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 24, color: Colors.grey[600]),
+        SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -295,50 +486,52 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
     );
   }
 
-  Widget _buildTopSearchContainer() {
-    return Positioned(
-      top: 20,
-      left: 16,
-      right: 16,
-      child: _buildSearchField(),
-    );
-  }
+  // Widget _buildTopSearchContainer() {
+  //   return Positioned(
+  //     top: 20,
+  //     left: 16,
+  //     right: 16,
+  //     child: _buildSearchField(),
+  //   );
+  // }
 
   Widget _buildSearchField() {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10.r),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 6)],
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search, color: Colors.grey),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: GooglePlaceAutoCompleteTextField(
-              textEditingController: rideSharingController.destinationTextController,
-              inputDecoration: InputDecoration(
-                labelText: 'Search your destination..',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 15.h, horizontal: 10.w),
-              ),
-              googleAPIKey: apiKey,
-              debounceTime: 800,
-              countries: ["np"],
-              isLatLngRequired: true,
-              getPlaceDetailWithLatLng: (prediction) async {
-                await _onPlaceSelected(prediction.description!);
-              },
-              itemClick: (prediction) async {
-                // Update the text field with the selected option
-                rideSharingController.destinationTextController.text = prediction.description!;
-                await _onPlaceSelected(prediction.description!);
-              },
-            ),
-          ),
-        ],
+        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 10.h),
+    decoration: BoxDecoration(
+    color: Colors.black,
+    borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+    boxShadow: [
+      BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8)],
+    ),
+      child: GooglePlaceAutoCompleteTextField(
+        textEditingController: rideSharingController.destinationTextController,
+        boxDecoration: BoxDecoration(
+            border: Border(
+              top: BorderSide.none,
+            )
+        ),
+        inputDecoration: InputDecoration(
+          labelText: 'Search your destination..',
+          labelStyle: TextStyle(color: Colors.white),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 15.h, horizontal: 10.w),
+
+        ),
+        googleAPIKey: apiKey,
+        debounceTime: 800,
+        countries: ["np"],
+        isLatLngRequired: true,
+        getPlaceDetailWithLatLng: (prediction) async {
+          await _onPlaceSelected(prediction.description!);
+        },
+
+        itemClick: (prediction) async {
+          // Update the text field with the selected option
+          rideSharingController.destinationTextController.text = prediction.description!;
+          await _onPlaceSelected(prediction.description!);
+        },
+        textStyle: TextStyle(color: Colors.white),
       ),
     );
   }
@@ -346,64 +539,96 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
   Widget _buildPickUpPlaceField() {
     // Initialize the controller with the current address if it's not already set
     rideSharingController.pickupPlaceController.text = currentAddress;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10.r),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 6)],
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search, color: Colors.grey),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: GooglePlaceAutoCompleteTextField(
-              textEditingController: rideSharingController.pickupPlaceController,
-              boxDecoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide.none,
-                  )
-              ),
-              googleAPIKey: apiKey,
-              debounceTime: 800,
-              countries: ["np"],
-              isLatLngRequired: true,
-              getPlaceDetailWithLatLng: (prediction) async {
-                await _onPlaceSelected(prediction.description!);
-              },
-              itemClick: (prediction) async {
-                // Update the text field with the selected option
-                rideSharingController.pickupPlaceController.text = prediction.description!;
-                await _onPlaceSelected(prediction.description!);
-              },
-            ),
+    return Expanded(
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8)],
+        ),
+        child: GooglePlaceAutoCompleteTextField(
+          textEditingController: rideSharingController.pickupPlaceController,
+          boxDecoration: BoxDecoration(
+              border: Border(
+                top: BorderSide.none,
+              )
           ),
-        ],
+          textStyle: TextStyle(color: Colors.white),
+          googleAPIKey: apiKey,
+          debounceTime: 800,
+          countries: ["np"],
+          isLatLngRequired: true,
+          getPlaceDetailWithLatLng: (prediction) async {
+            await _onPlaceSelected(prediction.description!);
+          },
+          itemClick: (prediction) async {
+            // Update the text field with the selected option
+            rideSharingController.pickupPlaceController.text = prediction.description!;
+            await _onPlaceSelected(prediction.description!);
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildBottomRideInfoContainer() {
+
+
+
+  Widget _buildBottomRideInfoContainer({bool isLoading = false}) {
     return Positioned(
-      bottom: 30,
-      left: 16,
-      right: 16,
+      bottom: 0,
+      left: 0,
+      right: 0,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10.r),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 6)],
+          color: Colors.black,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8)],
         ),
-        child: Column(
+        child: isLoading
+            ? _buildShimmerEffect()
+            : Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Ride Type Selection Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildRideOption(Icons.two_wheeler, "Moto"),
+                _buildRideOption(Icons.directions_car, "Ride"),
+                _buildRideOption(Icons.car_rental, "Comfort"),
+                _buildRideOption(Icons.local_shipping, "Delivery"),
+              ],
+            ),
+            SizedBox(height: 10.h),
 
-            _buildPickUpPlaceField(),
-            SizedBox(height: 10.h,),
-            if (rideSharingController.distance != null && duration != null) _buildDistanceDurationInfo(),
-            SizedBox(height: 10.h,),
+            // Pickup Location
+            Row(
+              children: [
+                Icon(Icons.radio_button_checked, color: Colors.green, size: 18),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: _buildPickUpPlaceField(),
+                ),
+              ],
+            ),
+
+            // Destination Field
+            SizedBox(height: 8.h),
+            Row(
+              children: [
+                Icon(Icons.radio_button_checked, color: Colors.green, size: 18),
+                SizedBox(width: 8.w),
+                Expanded(
+                  child: _buildSearchField(),
+                ),
+              ],
+            ),
+            SizedBox(height: 6.h),
+            _buildDistanceDurationInfo(),
+            SizedBox(height: 8.h),
             _buildSearchRideButton(),
           ],
         ),
@@ -411,53 +636,137 @@ class _RideSharingScreenState extends State<RideSharingScreen> {
     );
   }
 
-  Widget _buildDistanceDurationInfo() {
-    return Center(
+  Widget _buildShimmerEffect() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Distance: $distance', style: TextStyle(fontSize: 16.sp, color: Colors.black)),
-          Text('Duration: $duration', style: TextStyle(fontSize: 16.sp, color: Colors.black)),
-          Text('Estimated Price: $price', style: TextStyle(fontSize: 16.sp, color: Colors.black)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(4, (index) {
+              return Container(
+                width: 60.w,
+                height: 50.h,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+              );
+            }),
+          ),
+          SizedBox(height: 10.h),
+          Row(
+            children: [
+              Icon(Icons.radio_button_checked, color: Colors.green, size: 18),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Container(
+                  height: 40.h,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Row(
+            children: [
+              Icon(Icons.radio_button_checked, color: Colors.green, size: 18),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Container(
+                  height: 40.h,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Container(
+            height: 50.h,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSearchRideButton() {
-    return CustomButton(
-      onPressed: () async {
-        // Show loading dialog
-        Get.dialog(
-          Center(child: CircularProgressIndicator()),
-          barrierDismissible: false, // Prevent dismissing the dialog by tapping outside
-        );
 
-        // Validate all required fields
-        if (sourceLocation == null ||
-            destinationLocation== null ||
-            distance!.isEmpty ||
-            price!.isEmpty ||
-
-            destinationTextController.text.isEmpty) {
-          Get.back(); // Close the loading dialog
-          Get.snackbar("Error", "Please fill in all ride details.",
-              snackPosition: SnackPosition.BOTTOM);
-        } else {
-          try {
-            await rideSharingController.createRide(); // Proceed with creating the ride
-          } catch (e) {
-            Get.back(); // Close the loading dialog
-            Get.snackbar("Error", "Failed to create ride: ${e.toString()}",
-                snackPosition: SnackPosition.BOTTOM);
-          }
-        }
-      },
-      text: "Search Ride",
-      textColor: Colors.white,
-      width: double.infinity,
-      bottonColor: AppColors.greenColor,
+  // Helper method to build ride type option
+  Widget _buildRideOption(IconData icon, String label) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white, size: 28),
+        SizedBox(height: 4.h),
+        Text(label, style: TextStyle(color: Colors.white, fontSize: 12.sp)),
+      ],
     );
   }
+
+
+  // Widget _buildBottomRideInfoContainer() {
+  //   return Positioned(
+  //     bottom: 30,
+  //     left: 16,
+  //     right: 16,
+  //     child: Container(
+  //       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+  //       decoration: BoxDecoration(
+  //         color: Colors.white,
+  //         borderRadius: BorderRadius.circular(10.r),
+  //         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 6)],
+  //       ),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           if (rideAccepted)
+  //             Column(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 Text("Driver: ${driverDetails['driverName']}"),
+  //                 Text("Vehicle: ${driverDetails['vehicle']}"),
+  //                 Text("Phone: ${driverDetails['phone']}"),
+  //                 ElevatedButton(
+  //                   onPressed: () => _callDriver(driverDetails['phone']),
+  //                   child: Text("Call Driver"),
+  //                 ),
+  //               ],
+  //             )
+  //           else
+  //             Column(
+  //               children: [
+  //                 _buildPickUpPlaceField(),
+  //                 SizedBox(height: 10.h),
+  //                 if (rideSharingController.distance != null && duration != null)
+  //                   _buildDistanceDurationInfo(),
+  //                 SizedBox(height: 10.h),
+  //                 _buildSearchRideButton(),
+  //               ],
+  //             ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+
+
+  Widget _buildDistanceDurationInfo() {
+    return Center(
+      child: Column(
+        children: [
+          Text('Distance: $distance', style: TextStyle(fontSize: 16.sp, color: Colors.white)),
+          Text('Duration: $duration', style: TextStyle(fontSize: 16.sp, color: Colors.white)),
+          Text('Estimated Price: $price', style: TextStyle(fontSize: 16.sp, color: Colors.white)),
+        ],
+      ),
+    );
+  }
+
 
   Set<Marker> _createMarkers() {
     final markers = <Marker>{};

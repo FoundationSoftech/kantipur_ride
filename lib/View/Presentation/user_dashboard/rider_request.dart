@@ -149,7 +149,7 @@ class _RiderRequestUserState extends State<RiderRequestUser> {
                     Get.dialog(const Center(child: CircularProgressIndicator()));
 
                     // Avoid re-registering listeners every time the button is pressed
-                    rideRequestController.rideCancelled();  // Only trigger the ride cancel logic
+                    // rideRequestController.rideCancelled();  // Only trigger the ride cancel logic
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,

@@ -1,174 +1,189 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:get/get.dart';
-
-
-// class WebSocketService {
-//   IO.Socket? socket; // Make socket nullable
-//
-//   // Initialize and connect to the server
-//   void initializeConnection(String serverUrl) {
-//     socket = IO.io(
-//       serverUrl,
-//       IO.OptionBuilder()
-//           .setTransports(['websocket']) // Ensure WebSocket transport is used
-//           .enableAutoConnect() // Automatically connect to the server
-//           .build(),
-//     );
-//
-//     // Register connection events
-//     socket?.onConnect((_) {
-//       print("Connected to WebSocket Server");
-//     });
-//
-//     socket?.onDisconnect((_) {
-//       print("Disconnected from WebSocket Server");
-//     });
-//
-//     // Register all listeners
-//     registerSocketListeners();
-//   }
-//
-//   void on(String event, Function(dynamic) callback) {
-//     socket?.on(event, (data) => callback(data));
-//   }
-//
-//   void emit(String event, dynamic data) {
-//     socket?.emit(event, data);
-//   }
-//
-//   // Emit driver location update
-//   void updateDriverLocation(String driverId, double latitude, double longitude) {
-//     socket?.emit("update-driver-location", {
-//       "driverId": driverId,
-//       "latitude": latitude,
-//       "longitude": longitude,
-//     });
-//     print("Driver location sent: $latitude, $longitude");
-//   }
-//
-//   // Emit passenger location update
-//   void updatePassengerLocation(String passengerId, double latitude, double longitude) {
-//     socket?.emit("update-passenger-location", {
-//       "passengerId": passengerId,
-//       "latitude": latitude,
-//       "longitude": longitude,
-//     });
-//     print("Passenger location sent: $latitude, $longitude");
-//   }
-//
-//   void listenForRideRequests(Function(Map<String, dynamic>) onRideRequest) {
-//     // Listen to WebSocket event for incoming ride requests
-//     socket?.on('ride-request', (data) {
-//       onRideRequest(data); // Pass the data to the provided callback
-//     });
-//   }
-//
-//   // Emit ride events
-//   void rideCancel(String rideId, String cancelledBy) {
-//     socket?.emit("ride-cancel", {"rideId": rideId, "cancelledBy": cancelledBy});
-//     print("Ride $rideId canceled by $cancelledBy");
-//   }
-//
-//   void acceptRide(String rideId, String driverId, Map<String, dynamic> pickupLocation) {
-//     socket?.emit("accept-ride", {
-//       "rideId": rideId,
-//       "driverId": driverId,
-//       "pickupLocation": pickupLocation,
-//     });
-//     print("Ride $rideId accepted by driver $driverId");
-//   }
-//
-//   void ridePickup(String rideId, String driverId, String passengerId) {
-//     socket?.emit("ride-pickup", {
-//       "rideId": rideId,
-//       "driverId": driverId,
-//       "passengerId": passengerId,
-//     });
-//     print("Ride $rideId picked up by driver $driverId");
-//   }
-//
-//   void rideCompleted(String rideId, String driverId, String passengerId, double fare) {
-//     socket?.emit("ride-completed", {
-//       "rideId": rideId,
-//       "driverId": driverId,
-//       "passengerId": passengerId,
-//       "fare": fare,
-//     });
-//     print("Ride $rideId completed. Fare: $fare");
-//   }
-//
-//   // Register listeners for incoming events
-//   void registerSocketListeners() {
-//     socket?.on("ride-cancel", (data) {
-//       print("Ride Cancelled: $data");
-//       Get.snackbar("Ride Cancelled", "The ride has been cancelled by the user.");
-//     });
-//
-//     socket?.on("accept-ride", (data) {
-//       print("Ride Accepted: $data");
-//       Get.snackbar("Ride Accepted", "Your ride request has been accepted!");
-//     });
-//
-//     socket?.on("ride-pickup", (data) {
-//       print("Ride Pickup: $data");
-//       Get.snackbar("Ride Pickup", "Your driver has arrived for the pickup.");
-//     });
-//
-//     socket?.on("ride-completed", (data) {
-//       print("Ride Completed: $data");
-//       Get.snackbar("Ride Completed", "Your ride has been completed!");
-//     });
-//
-//     socket?.on("ride-request", (data) {
-//       print("Ride Request received: $data");
-//       Get.snackbar("New Ride Request", "A new ride request has been received!");
-//     });
-//   }
-//
-//   // Disconnect the socket
-//   void disconnect() {
-//     socket?.disconnect();
-//     print("Disconnected from WebSocket Server");
-//   }
-// }
-
-
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import '../controller/shared_preferences.dart';
 
 class UserWebSocketService {
   static final UserWebSocketService _instance = UserWebSocketService._internal();
 
   factory UserWebSocketService() => _instance;
 
+  // Callbacks for UI updates
+  Function(Map<String, dynamic>)? onDriverLocation;
+  Function(Map<String, dynamic>)? onRideStatusUpdate;
+
+  final PrefrencesManager prefrencesManager = PrefrencesManager();
+
   IO.Socket? socket;
-  bool _isConnected = false;
+  bool isConnected = false;
   String? socketId; // Store socket ID
+  String? _token;
 
   UserWebSocketService._internal();
 
-  /// Initialize WebSocket connection
-  void initializeConnection(String serverUrl) {
-    if (socket != null && socket!.connected) {
-      print("⚡ WebSocket already connected with ID: ${socket?.id}");
-      return;
+  Function(Map<String, dynamic>)? onRideAcceptReceived;
+
+  Function(Map<String, dynamic>)? onRideCancelReceived;
+  Rx<Map<String, dynamic>?> acceptRide = Rx<Map<String, dynamic>?>(null);
+
+  void onConnect(String token) {
+    _token = token; // Store token for potential reconnections
+
+    if (socket == null || !(socket?.connected ?? false)) {
+      initializeConnection("https://kantipur-rides-backend.onrender.com", token);
     }
+  }
 
-    socket = IO.io(
-      serverUrl,
-      IO.OptionBuilder()
-          .setTransports(['websocket'])
-          .enableAutoConnect()
-          .setQuery({'userType': 'user'})  // Add user type
-          .build(),
-    );
 
-    socket?.onConnect((_) {
-      print("✅ Connected to WebSocket Server with ID: ${socket?.id}");
-      print("✅ Connection status: ${socket?.connected}");
-    });
+  // void initializeConnection(String serverUrl, String token) {
+  //   try {
+  //     // Prevent multiple connection attempts
+  //     if (socket != null && socket!.connected) {
+  //       print("Socket already connected. Returning.");
+  //       return;
+  //     }
+  //
+  //     // Add timeout for connection
+  //     socket = IO.io(
+  //       serverUrl,
+  //       IO.OptionBuilder()
+  //           .setTransports(['websocket'])
+  //           .enableAutoConnect()
+  //           .setReconnectionAttempts(5)
+  //           .setReconnectionDelay(1000) // 1 second delay between reconnection attempts
+  //           .setTimeout(10000) // 10 seconds timeout
+  //           .build(),
+  //     );
+  //
+  //     // Handle connection events
+  //     socket?.onConnect((_) async {
+  //       print("Successfully Connected to WebSocket Server");
+  //       print("Socket ID: ${socket?.id}");
+  //       _updateConnectionState(true);
+  //
+  //       // Verify connection status
+  //       if (socket?.connected == true) {
+  //         Get.snackbar(
+  //           "Connection Status",
+  //           "Connected to the server",
+  //           backgroundColor: Colors.green,
+  //           colorText: Colors.white,
+  //         );
+  //
+  //         // Proceed with initialization steps
+  //         await initializeUserSession(token);
+  //       }
+  //     });
+  //
+  //     // Handle connection errors
+  //     socket?.onConnectError((error) {
+  //       print("WebSocket Connection Error: $error");
+  //       _updateConnectionState(false);
+  //       Get.snackbar(
+  //         "Connection Error",
+  //         "Failed to connect to server: $error",
+  //         backgroundColor: Colors.red,
+  //         colorText: Colors.white,
+  //       );
+  //
+  //       // Retry connection after a delay
+  //       Future.delayed(Duration(seconds: 5), () => reconnect());
+  //     });
+  //
+  //     // Handle general errors
+  //     socket?.onError((error) {
+  //       print("WebSocket Error: $error");
+  //       _updateConnectionState(false);
+  //       Get.snackbar(
+  //         "Socket Error",
+  //         "An error occurred: $error",
+  //         backgroundColor: Colors.red,
+  //         colorText: Colors.white,
+  //       );
+  //     });
+  //
+  //   } catch (e) {
+  //     print("Unexpected error in WebSocket initialization: $e");
+  //     Get.snackbar(
+  //       "Initialization Error",
+  //       "Could not initialize WebSocket: $e",
+  //       backgroundColor: Colors.red,
+  //       colorText: Colors.white,
+  //     );
+  //   }
+  // }
 
-    socket?.onError((error) {
-      print("🔴 Socket Error: $error");
-    });
+  void initializeConnection(String serverUrl, String token) {
+    try {
+      if (socket != null && socket!.connected) {
+        print("Socket already connected. Returning.");
+        return;
+      }
+
+      socket = IO.io(
+        serverUrl,
+        IO.OptionBuilder()
+            .setTransports(['websocket'])
+            .enableAutoConnect()
+            .setReconnectionAttempts(5)
+            .setReconnectionDelay(1000)
+            .setTimeout(10000)
+            .build(),
+      );
+
+      socket?.onConnect((_) async {
+        print("Successfully Connected to WebSocket Server");
+        print("Socket ID: ${socket?.id}");
+        _updateConnectionState(true);
+
+        if (socket?.connected == true) {
+          Get.snackbar(
+            "Connection Status",
+            "Connected to the server",
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+          );
+
+          await initializeUserSession(token);
+        }
+      });
+
+      socket?.onConnectError((error) {
+        print("WebSocket Connection Error: $error");
+        _updateConnectionState(false);
+        Get.snackbar(
+          "Connection Error",
+          "Failed to connect to server: $error",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+
+        Future.delayed(Duration(seconds: 5), () => reconnect());
+      });
+
+      socket?.onError((error) {
+        print("WebSocket Error: $error");
+        _updateConnectionState(false);
+        Get.snackbar(
+          "Socket Error",
+          "An error occurred: $error",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      });
+    } catch (e) {
+      print("Unexpected error in WebSocket initialization: $e");
+      Get.snackbar(
+        "Initialization Error",
+        "Could not initialize WebSocket: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   /// Emit events to the server
@@ -181,44 +196,275 @@ class UserWebSocketService {
     }
   }
 
-  /// Register all necessary WebSocket event listeners
   void registerSocketListeners() {
-    socket?.on("ride-request", (data) {
-      print("📥 New ride request emitted: $data");
-    });
+    Map<String, String> eventMessages = {
+      "ride-cancel": "The ride was cancelled.",
+      "ride-pickup": "Driver has arrived.",
+      "ride-completed": "Ride completed successfully.",
+      "accept-ride": "Ride request accepted."
+    };
 
-    socket?.on("ride-cancel", (data) {
-      print("🚫 Ride Cancelled: $data");
-      Get.snackbar("Ride Cancelled", "The ride was cancelled.");
+    eventMessages.forEach((event, message) {
+      socket?.on(event, (data) {
+        print("$event: $data");
+        Get.snackbar(
+            event.replaceAll("-", " ").capitalizeFirst!,
+            message,
+            backgroundColor: event.contains('decline') ? Colors.red : Colors.green,
+            colorText: Colors.white
+        );
+      });
     });
+  }
 
-    socket?.on("accept-ride", (data) {
-      print("✅ Ride Accepted: $data");
-      Get.snackbar("Ride Accepted", "Your ride request has been accepted.");
-    });
+  // In a network change listener
+  void onNetworkChange(bool isConnected) {
+    if (!isConnected) {
+      reconnect();
+    }
+  }
 
-    socket?.on("ride-pickup", (data) {
-      print("🚖 Ride Pickup: $data");
-      Get.snackbar("Ride Pickup", "Your driver has arrived for the pickup.");
-    });
+// In app lifecycle method
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      reconnect();
+    }
+  }
 
-    socket?.on("ride-completed", (data) {
-      print("🏁 Ride Completed: $data");
-      Get.snackbar("Ride Completed", "Your ride has been completed!");
+  Future<void> refreshToken() async {
+    String? newToken = await prefrencesManager.getAuthToken();
+    if (newToken != null) {
+      _token = newToken;
+    } else {
+      print("Failed to refresh token.");
+    }
+  }
+
+  Future<void> updatePassengerLocation(String token, String passengerId, LatLng location) async {
+    if (socket?.connected != true) {
+      print('❌ Socket not connected. Cannot update location.');
+      return;
+    }
+
+    try {
+      final completer = Completer<void>();
+
+      print("📡 Emitting location update:");
+      print("   - Passenger ID: $passengerId");
+      print("   - Latitude: ${location.latitude}");
+      print("   - Longitude: ${location.longitude}");
+      print("   - Socket ID: ${socket?.id}");
+
+      socket?.emitWithAck(
+          'update-passenger-location',
+          {
+            'passengerId': passengerId,
+            'currentLatitude': location.latitude,
+            'currentLongitude': location.longitude,
+            'socketId': socket?.id,
+          },
+          ack: (data) {
+            print('✅ ACK received from server: $data');
+            completer.complete();
+          }
+      );
+
+      await completer.future.timeout(
+        Duration(seconds: 10),
+        onTimeout: () {
+          print('❌ Location update timeout! No ACK received.');
+        },
+      );
+    } catch (e) {
+      print('❌ Error updating location: $e');
+    }
+  }
+
+
+
+
+  // Optional: Add a method to verify the socket connection before updating
+  bool verifyConnection() {
+    if (socket?.connected != true) {
+      print('Socket disconnected. Attempting reconnection...');
+      reconnect();
+      return false;
+    }
+    return true;
+  }
+  // New method to handle driver session initialization
+  Future<void> initializeUserSession(String token) async {
+    try {
+      // Fetch driver ID
+      String? passengerId = await prefrencesManager.getuserId();
+
+      if (passengerId == null) {
+        print("Error: Driver ID is null");
+        return;
+      }
+
+      // Get location with error handling
+      try {
+        Position position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 10)
+        );
+
+        LatLng currentLocation = LatLng(position.latitude, position.longitude);
+        updatePassengerLocation(token,passengerId,currentLocation);
+      } catch (locationError) {
+        print("Location retrieval error: $locationError");
+        Get.snackbar(
+            "Location Error",
+            "Could not retrieve current location",
+            backgroundColor: Colors.orange,
+            colorText: Colors.white
+        );
+      }
+
+      // Setup listeners after successful connection
+      setupRideAcceptListener();
+      setupRideCancelListener();
+      registerSocketListeners();
+
+
+    } catch (sessionError) {
+      print("Driver session initialization error: $sessionError");
+      Get.snackbar(
+          "Session Error",
+          "Failed to initialize driver session",
+          backgroundColor: Colors.red,
+          colorText: Colors.white
+      );
+    }
+  }
+
+
+  void setupRideAcceptListener() {
+    socket?.on('accept-ride', (data) {
+      if (data != null) {
+        // Detailed logging of the ride request
+        print("Accept ride: {");
+        print("  rideId: ${data['rideId']},");
+        print("  pickupLatitude: ${data['pickupLatitude']},");
+        print("  pickupLongitude: ${data['pickupLongitude']},");
+        print("  destinationLatitude: ${data['destinationLatitude']},");
+        print("  destinationLongitude: ${data['destinationLongitude']},");
+        print("  destinationPlaceName: ${data['destinationPlaceName']},");
+        print("  pickupPlaceName: ${data['pickupPlaceName']},");
+        print("  fare: ${data['fare']},");
+        print("  distance: ${data['distance']},");
+        print("  rideType: ${data['rideType']}");
+        print("}");
+
+        // Convert data to proper Map if needed
+        final Map<String, dynamic> rideData = data is Map
+            ? Map<String, dynamic>.from(data)
+            : jsonDecode(data.toString());
+
+        // Call the callback to update UI
+        if (onRideAcceptReceived != null) {
+          onRideAcceptReceived!(rideData);
+        }
+
+        // Show notification
+        Get.snackbar(
+          "Ride Accepted",
+          "From: ${data['pickupPlaceName']}\nTo: ${data['destinationPlaceName']}\nFare: ${data['fare']}",
+          duration: Duration(seconds: 10),
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      } else {
+        print("Warning: Received null ride request data");
+      }
     });
+  }
+
+  void setupRideCancelListener() {
+    socket?.on('ride-cancel', (data) {
+      if (data != null) {
+        // Detailed logging of the ride request
+        print("Cancel ride: {");
+        print("  rideId: ${data['rideId']},");
+        print("  pickupLatitude: ${data['pickupLatitude']},");
+        print("  pickupLongitude: ${data['pickupLongitude']},");
+        print("  destinationLatitude: ${data['destinationLatitude']},");
+        print("  destinationLongitude: ${data['destinationLongitude']},");
+        print("  destinationPlaceName: ${data['destinationPlaceName']},");
+        print("  pickupPlaceName: ${data['pickupPlaceName']},");
+        print("  fare: ${data['fare']},");
+        print("  distance: ${data['distance']},");
+        print("  rideType: ${data['rideType']}");
+        print("}");
+
+        // Convert data to proper Map if needed
+        final Map<String, dynamic> rideData = data is Map
+            ? Map<String, dynamic>.from(data)
+            : jsonDecode(data.toString());
+
+        // Call the callback to update UI
+        if (onRideCancelReceived != null) {
+          onRideCancelReceived!(rideData);
+        }
+
+        // Show notification
+        Get.snackbar(
+          "Ride Accepted",
+          "From: ${data['pickupPlaceName']}\nTo: ${data['destinationPlaceName']}\nFare: ${data['fare']}",
+          duration: Duration(seconds: 10),
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      } else {
+        print("Warning: Received null ride request data");
+      }
+    });
+  }
+
+  Future<void> reconnect() async {
+    if (_token == null) {
+      print("Token is null. Cannot reconnect.");
+      return;
+    }
+
+    // Disconnect existing socket
+    socket?.disconnect();
+
+    // Reinitialize connection with stored token
+    initializeConnection("https://kantipur-rides-backend.onrender.com", _token!);
+
+    // Wait for connection to be established
+    await Future.delayed(Duration(seconds: 2)); // Adjust delay as needed
+
+    if (socket?.connected != true) {
+      print("Failed to reconnect.");
+    }
+  }
+
+  void _updateConnectionState(bool isConnected) {
+    isConnected = isConnected;
+    // Notify listeners or update UI if needed
+    if (isConnected) {
+      print("WebSocket connected.");
+    } else {
+      print("WebSocket disconnected.");
+    }
   }
 
   /// Disconnect the WebSocket
   void disconnect() {
     socket?.disconnect();
-    print("❌ WebSocket Disconnected");
-    _isConnected = false;
+    socket?.clearListeners(); // Clear all listeners
+    _updateConnectionState(false);
     socketId = null;
+    print("❌ WebSocket Disconnected");
   }
-
   /// Getter for socketId
   String? getSocketId() {
     return socketId;
   }
+
 }
 
